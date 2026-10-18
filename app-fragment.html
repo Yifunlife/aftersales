@@ -282,14 +282,14 @@
 </div>
 <div class="metrics"></div><section id="yw-stage-panel" class="panel"><div class="stages"><h2>全流程进度</h2></div></section>
 <section id="yw-entry" class="panel" hidden aria-label="售后问题录入">
-<div class="toolbar"><h2>录入售后问题</h2><small>统一字段 · 确认后立即进入工单列表</small></div>
+<div class="toolbar"><h2>录入售后问题</h2><button type="button" class="cursor-interaction" data-template><i data-lucide="download" aria-hidden="true"></i>下载导入模板</button><small>统一字段 · 确认后立即进入工单列表</small></div>
 <div class="entry-choices">
 <button type="button" class="entry-choice cursor-interaction" data-entry="import"><i data-lucide="file-spreadsheet" aria-hidden="true"></i><span><strong>导入表格</strong><small>Excel / CSV 批量录入 · 检查后确认导入</small></span></button>
 <button type="button" class="entry-choice cursor-interaction" data-entry="manual"><i data-lucide="square-pen" aria-hidden="true"></i><span><strong>售后专员填写</strong><small>逐单填写售后问题 · 确认后生成工单</small></span></button>
 </div>
 <form id="yw-manual" class="entry-form" hidden></form>
 <div id="yw-import" class="entry-form" hidden>
-<div class="toolbar"><h2>表格导入</h2><button type="button" class="cursor-interaction" data-template>下载 Excel 模板</button></div>
+<div class="toolbar"><h2>表格导入</h2><button type="button" class="cursor-interaction" data-template>下载导入模板</button></div>
 <label class="form-field">选择售后问题表格<input id="yw-file" type="file" accept=".xlsx,.xls,.csv,.tsv"></label>
 <div class="entry-actions"><small>支持紧凑记录单或逐行明细表 · 保持模板字段位置 · 日期 YYYY-MM-DD</small></div>
 <div id="yw-import-status" aria-live="polite" class="muted" style="margin-top:10px"></div>
@@ -989,16 +989,12 @@ try{if(file.size>5*1024*1024)throw new Error('文件超过 5 MB，请精简后�
 if(ext==='csv'||ext==='tsv')rows=csvRows(await file.text(),ext==='tsv'?'\t':',');else if(ext==='xlsx'||ext==='xls'){const X=await loadXLSX();const wb=X.read(await file.arrayBuffer(),{type:'array',cellDates:true});const name=wb.SheetNames.includes('售后记录单')?'售后记录单':wb.SheetNames.includes('售后问题导入')?'售后问题导入':wb.SheetNames[0];rows=X.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:false,dateNF:'yyyy-mm-dd'});}else throw new Error('请选择 Excel、CSV 或 TSV 文件。');if(String(rows[0]?.[0]||'').includes('售后维修记录单')){const parsed=readCompactForm(rows);prepareImport(parsed.rows,parsed.sources)}else prepareImport(rows)}catch(error){$('#yw-import-errors').textContent=error.message;$('#yw-import-status').textContent='未导入任何记录。'}
 });
 async function downloadTemplate(){
-const X=await loadXLSX(),wb=X.utils.book_new(),layout=compactLayout(),schema=getTemplateFields();
-const make=example=>{const rows=Array.from({length:38},()=>Array(12).fill(''));const merges=[];const merge=(r,c,end)=>merges.push({s:{r,c},e:{r,c:end}});const put=(r,c,text,end=c)=>{rows[r][c]=text;merge(r,c,end)};
-put(0,0,'亦玩集团售后维修记录单',11);put(1,0,'客户与项目资料填写一次，原有输入字段全部保留。',11);
-for(const [key,[r,c]] of Object.entries(layout.common)){const f=schema.find(f=>f.key===key);put(r,c-2,f.label+(f.required?' *':''),c-1);const end=key==='project'?5:key==='customer'||key==='country'?11:key==='order'?5:key==='address'?11:c+1;put(r,c,example?({project:'示例项目 A',customer:'示例连锁客户 A',order:'YW-ORD-001',reported:today,warrantyMode:'自动读取',contact:'示例联系人 A',whatsapp:'示例微信号'})[key]||'':'',end);}
-put(7,4,'保修状态 / 提醒',5);put(7,6,'导入后由系统计算',11);put(8,0,'自动读取保修时无需重复填日期；手工填写时填写起止日期。',11);
-for(let i=0;i<3;i++){const start=9+i*9;put(start,0,'售后问题 '+(i+1),11);for(const [key,[o,c]] of Object.entries(layout.detail)){const f=schema.find(f=>f.key===key);put(start+o,c-2,f.label+(f.required?' *':''),c-1);const end=['issue','feedback','evidence'].includes(key)?11:c+1;put(start+o,c,example&&i===0?({product:'示例设备 P001',issue:'填写设备故障现象',feedback:'填写客户反馈及当前处理记录',owner:'售后专员姓名',grade:'待评估',stage:'审核',method:'待确定',cost:'待确认',evidenceMode:'上传照片 / 视频'})[key]||'':'',end);}}
-put(36,0,'更多问题可复制完整的九行问题区块粘贴到下方，保持字段位置。',11);put(37,0,'照片 / 视频可填链接或导入后上传；设备使用天数由系统计算。',11);
-const sh=X.utils.aoa_to_sheet(rows);sh['!merges']=merges;sh['!cols']=Array.from({length:12},()=>({wch:14}));sh['!rows']=Array.from({length:38},(_,i)=>({hpt:[12,13,21,22,30,31].includes(i)?42:25}));for(const [key,[r,c]] of Object.entries(layout.common)){if(schema.find(f=>f.key===key).type==='date')sh[X.utils.encode_cell({r,c})].z='yyyy-mm-dd';}for(let i=0;i<3;i++)for(const [key,[o,c]] of Object.entries(layout.detail))if(schema.find(f=>f.key===key).type==='date')sh[X.utils.encode_cell({r:9+i*9+o,c})].z='yyyy-mm-dd';return sh;};
-X.utils.book_append_sheet(wb,make(false),'售后记录单');X.utils.book_append_sheet(wb,make(true),'填写示例（不导入）');X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet([['填写事项','说明'],['基本信息','上方填写一次客户、项目、原订单等基本信息。'],['多条问题','下方每个九行区块记录一条问题，原有字段全部保留。'],['新增问题','复制完整九行区块到下方，首行保留“售后问题 数字”，字段位置不变。'],['导入','只读取售后记录单第一页，填写示例不会导入。'],['附件','表格填链接，照片和视频文件可在导入后的工单上传。']]),'填写说明');X.writeFile(wb,'亦玩售后维修记录单-紧凑样板.xlsx');
+const response=await fetch('/templates/after-sales-import.xlsx',{cache:'no-store'});
+if(!response.ok)throw new Error('模板暂时下载失败，请稍后重试。');
+const url=URL.createObjectURL(await response.blob()),link=document.createElement('a');
+link.href=url;link.download='亦玩集团售后维修记录单-最新版.xlsx';link.hidden=true;root.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
+
 root.addEventListener('input',e=>{const reviewForm=e.target.closest('.yw-review-item-form');if(reviewForm)captureReviewEdits(reviewForm);if(e.target.closest('#yw-manual')){if(e.target.name==='delivered')deliveryFromDevice=false;if(['delivered','reported','product','order','customer','project'].includes(e.target.name))updateDeviceAge(['product','order','customer','project'].includes(e.target.name));}if(e.target.closest('#yw-manual')&&['order','customer','project','warrantyMode','manualWarrantyStart','manualWarrantyEnd'].includes(e.target.name))updateAutoWarranty(e.target.name==='order')});
 root.addEventListener('change',e=>{
 if(e.target.closest('#yw-engineering-form')&&e.target.name==='orderGroup'){updateOrderingPeople(e.target.form);captureDepartmentEdits();return;}
