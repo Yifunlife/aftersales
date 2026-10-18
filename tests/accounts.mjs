@@ -1,7 +1,7 @@
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,readdirSync} from 'node:fs';
 import assert from 'node:assert/strict';
-import {handleAccounts,sessionUser} from '../lib/accounts.mjs';
+import {handleAccounts,sessionUser,passwordHash} from '../lib/accounts.mjs';
 const sqlite=new DatabaseSync(':memory:');
 for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')))sqlite.exec(readFileSync('drizzle/'+f,'utf8'));
 class Statement {
@@ -42,3 +42,18 @@ assert.equal((await call('employees',undefined,{session:''})).status,401);
 assert.equal((await call('auth/logout',{})).status,200);assert.equal((await call('auth/status',undefined,{session:originalAdmin})).data.user,null);
 assert(sqlite.prepare('SELECT hash FROM employees').all().every(u=>/^[a-f0-9]{64}$/.test(u.hash)));
 console.log('Passed: bootstrap identity, dual login, duplicate accounts, forced password change, session revocation, admin guards, deactivation, reset, CSRF, rate limits, no password disclosure, logout.');
+
+// Isolated fresh database: trusted deployment configuration initializes once.
+sqlite.exec('DELETE FROM account_audit; DELETE FROM sessions; DELETE FROM login_limits; DELETE FROM employees;');
+const seedSalt='12'.repeat(16), seedHash=await passwordHash('TestConfiguredAdmin9!',seedSalt);
+const seedConfig={...config,initialAdmin:{hash:seedHash,salt:seedSalt}};
+let seeded=await handleAccounts(new Request('https://test.local/api/auth/status'),seedConfig);
+assert.equal((await seeded.json()).setupRequired,false);
+const stored=sqlite.prepare('SELECT * FROM employees').get();assert.equal(stored.email,'owner@example.test');assert.equal(stored.employee_id,'admin001');assert.equal(stored.role,'管理员');
+assert.equal((await call('auth/login',{identifier:'owner@example.test',password:'TestConfiguredAdmin9!'})).status,200);
+await handleAccounts(new Request('https://test.local/api/auth/status'),{...seedConfig,initialAdmin:{hash:'ab'.repeat(32),salt:seedSalt}});
+assert.equal(sqlite.prepare('SELECT hash FROM employees').get().hash,seedHash);
+sqlite.exec('DELETE FROM account_audit; DELETE FROM sessions; DELETE FROM login_limits; DELETE FROM employees;');
+assert.equal((await call('auth/bootstrap',{...admin,employeeId:'other@example.test'},{identity:{userId:'owner',email:'owner@example.test'}})).status,400);
+assert.equal((await call('auth/bootstrap',{...admin,employeeId:'OWNER@EXAMPLE.TEST'},{identity:{userId:'owner',email:'owner@example.test'}})).status,201);
+console.log('Passed: deployment admin provisioning is private and idempotent; verified email may open administrator account.');
