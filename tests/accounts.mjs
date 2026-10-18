@@ -1,0 +1,44 @@
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync,readdirSync} from 'node:fs';
+import assert from 'node:assert/strict';
+import {handleAccounts,sessionUser} from '../lib/accounts.mjs';
+const sqlite=new DatabaseSync(':memory:');
+for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')))sqlite.exec(readFileSync('drizzle/'+f,'utf8'));
+class Statement {
+ constructor(sql,values=[]){this.sql=sql;this.values=values;}
+ bind(...values){return new Statement(this.sql,values);}
+ async first(){return sqlite.prepare(this.sql).get(...this.values)||null;}
+ async all(){return {results:sqlite.prepare(this.sql).all(...this.values)};}
+ async run(){return {meta:{changes:Number(sqlite.prepare(this.sql).run(...this.values).changes)}};}
+}
+const db={prepare(sql){return new Statement(sql)},async batch(statements){sqlite.exec('BEGIN');try{const r=[];for(const s of statements)r.push(await s.run());sqlite.exec('COMMIT');return r}catch(e){sqlite.exec('ROLLBACK');throw e}}};
+const config={db,ownerEmail:'owner@example.test',identity:null};let cookie='';
+async function call(path,data,{identity=null,session=cookie,origin='https://test.local',ip='127.0.0.1'}={}){const request=new Request('https://test.local/api/'+path,{method:data?'POST':'GET',headers:{cookie:session,origin,'cf-connecting-ip':ip,...(data?{'Content-Type':'application/json'}:{})},body:data?JSON.stringify(data):undefined});const response=await handleAccounts(request,{...config,identity});return {status:response.status,data:await response.json(),cookie:response.headers.get('set-cookie')?.split(';')[0]};}
+const admin={name:'管理员',employeeId:'ADMIN01',password:'Fixture_admin_829!'};
+assert.equal((await call('auth/status')).data.setupRequired,true);
+assert.equal((await call('auth/bootstrap',admin)).status,403);
+assert.equal((await call('auth/bootstrap',admin,{identity:{userId:'wrong',email:'wrong@example.test'}})).status,403);
+let r=await call('auth/bootstrap',admin,{identity:{userId:'owner',email:'owner@example.test'}});assert.equal(r.status,201);cookie=r.cookie;const originalAdmin=cookie,adminId=r.data.user.id;
+assert.equal((await call('auth/bootstrap',admin,{identity:{userId:'owner',email:'owner@example.test'}})).status,409);
+assert.equal((await call('employees',{}, {origin:'https://evil.test'})).status,403);
+assert.equal((await call('employees',{name:'采购甲',employeeId:'YW001',email:'buyer@example.test',role:'采购人员',password:'Fixture_buyer_829!'})).status,201);
+assert.equal((await call('employees',{name:'重复',employeeId:'yw001',email:'other@example.test',role:'生产人员',password:'Fixture_buyer_829!'})).status,409);
+let list=(await call('employees')).data.employees;assert.equal(list.length,2);assert(!JSON.stringify(list).includes('hash'));const buyer=list.find(u=>u.role==='采购人员');
+r=await call('auth/login',{identifier:'BUYER@EXAMPLE.TEST',password:'Fixture_buyer_829!'});assert.equal(r.status,200);const temporary=r.cookie;
+assert.equal((await call('employees',undefined,{session:temporary})).status,403);
+r=await call('auth/password',{currentPassword:'Fixture_buyer_829!',password:'Fixture_newbuyer_9!'},{session:temporary});assert.equal(r.status,200);const buyerSession=r.cookie;assert.equal((await call('auth/status',undefined,{session:temporary})).data.user,null);
+assert.equal((await call('employees',undefined,{session:buyerSession})).status,403);
+assert.equal((await call('auth/status',undefined,{session:buyerSession})).data.user.mustChange,false);
+assert.equal((await call('employees/'+adminId,{...list.find(u=>u.id===adminId),active:false})).status,409);
+assert.equal((await call('employees/'+buyer.id,{...buyer,active:false})).status,200);assert.equal((await call('auth/status',undefined,{session:buyerSession})).data.user,null);
+assert.equal((await call('auth/login',{identifier:'YW001',password:'Fixture_newbuyer_9!'})).status,401);
+assert.equal((await call('employees/'+buyer.id,{...buyer,active:true})).status,200);
+assert.equal((await call('employees/'+buyer.id+'/reset',{password:'Fixture_reset_829!'})).status,200);
+assert.equal((await call('auth/login',{identifier:'yw001',password:'Fixture_newbuyer_9!'})).status,401);
+r=await call('auth/login',{identifier:'YW001',password:'Fixture_reset_829!'});assert.equal(r.status,200);assert(r.data.user.mustChange);
+for(let i=0;i<5;i++)assert.equal((await call('auth/login',{identifier:'missing',password:'bad'},{ip:'other'})).status,401);
+assert.equal((await call('auth/login',{identifier:'missing',password:'bad'},{ip:'other'})).status,429);
+assert.equal((await call('employees',undefined,{session:''})).status,401);
+assert.equal((await call('auth/logout',{})).status,200);assert.equal((await call('auth/status',undefined,{session:originalAdmin})).data.user,null);
+assert(sqlite.prepare('SELECT hash FROM employees').all().every(u=>/^[a-f0-9]{64}$/.test(u.hash)));
+console.log('Passed: bootstrap identity, dual login, duplicate accounts, forced password change, session revocation, admin guards, deactivation, reset, CSRF, rate limits, no password disclosure, logout.');
