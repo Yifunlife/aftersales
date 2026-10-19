@@ -1,0 +1,382 @@
+[
+  [
+    "客户服务",
+    "Customer care",
+    "خدمة العملاء"
+  ],
+  [
+    "专属售后查询",
+    "Your service order",
+    "متابعة طلب الخدمة"
+  ],
+  [
+    "验证邮箱，查看进度",
+    "Verify email to view progress",
+    "تحقق من بريدك لمتابعة الطلب"
+  ],
+  [
+    "杭州体验店 · 售后订单",
+    "Hangzhou Experience Store · Service order",
+    "متجر هانغتشو التجريبي · طلب خدمة"
+  ],
+  [
+    "杭州体验店",
+    "Hangzhou Experience Store",
+    "متجر هانغتشو التجريبي"
+  ],
+  [
+    "项目授权邮箱",
+    "Authorized email",
+    "البريد الإلكتروني المعتمد"
+  ],
+  [
+    "填写接收查询链接的邮箱",
+    "Email that received your tracking link",
+    "البريد الذي استلم رابط المتابعة"
+  ],
+  [
+    "邮箱验证码",
+    "Email verification code",
+    "رمز التحقق عبر البريد"
+  ],
+  [
+    "6 位验证码",
+    "6-digit code",
+    "رمز من 6 أرقام"
+  ],
+  [
+    "获取验证码",
+    "Send code",
+    "إرسال الرمز"
+  ],
+  [
+    "查看我的售后",
+    "View my service order",
+    "عرض طلب الخدمة"
+  ],
+  [
+    "仅限项目授权邮箱查看此订单，无需创建账号或记住密码。",
+    "Only the authorized email can access this order. No account or password needed.",
+    "يمكن للبريد المعتمد فقط الاطلاع على هذا الطلب، دون إنشاء حساب أو كلمة مرور."
+  ],
+  [
+    "示例订单 · 客户可见",
+    "DEMO ORDER · CUSTOMER VIEW",
+    "طلب تجريبي · عرض العميل"
+  ],
+  [
+    "您的售后，正在跟进",
+    "Your service, in progress",
+    "نتابع طلب خدمتك"
+  ],
+  [
+    "进度更新后，您可在这里随时查看。",
+    "Check the latest updates here, anytime.",
+    "يمكنك الاطلاع على آخر المستجدات هنا في أي وقت."
+  ],
+  [
+    "售后订单",
+    "Service order",
+    "طلب الخدمة"
+  ],
+  [
+    "3 项售后，1 项完成",
+    "3 service items, 1 completed",
+    "3 بنود خدمة، اكتمل منها بند واحد"
+  ],
+  [
+    "1 项生产中 · 1 项已发货",
+    "1 in production · 1 shipped",
+    "بند قيد الإنتاج · بند تم شحنه"
+  ],
+  [
+    "今天 10:20 更新",
+    "Updated 19 Oct, 10:20 (UTC+8)",
+    "آخر تحديث: 19 أكتوبر، 10:20 (UTC+8)"
+  ],
+  [
+    "售后处理进度",
+    "Service items",
+    "بنود الخدمة"
+  ],
+  [
+    "共 3 项",
+    "3 items",
+    "3 بنود"
+  ],
+  [
+    "最近进展",
+    "Latest updates",
+    "آخر المستجدات"
+  ],
+  [
+    "按更新时间",
+    "Most recent first",
+    "الأحدث أولاً"
+  ],
+  [
+    "护板 P02 · 补发 1 套",
+    "P02 panel · 1 replacement set",
+    "لوح الحماية P02 · مجموعة بديلة واحدة"
+  ],
+  [
+    "控制器 C05 · 更换 1 件",
+    "C05 controller · 1 replacement",
+    "وحدة التحكم C05 · قطعة بديلة واحدة"
+  ],
+  [
+    "电机 M01 · 远程调试",
+    "M01 motor · Remote setup",
+    "المحرك M01 · ضبط عن بُعد"
+  ],
+  [
+    "预计 10 月 22 日发货",
+    "Est. dispatch: 22 Oct",
+    "الشحن المتوقع: 22 أكتوبر"
+  ],
+  [
+    "预计 10 月 21 日送达",
+    "Est. delivery: 21 Oct",
+    "التسليم المتوقع: 21 أكتوبر"
+  ],
+  [
+    "10 月 17 日已恢复使用",
+    "Back in use since 17 Oct",
+    "عاد للعمل منذ 17 أكتوبر"
+  ],
+  [
+    "完成尺寸与外观检查后，交仓库打包发货。",
+    "Final dimension and appearance checks, then packing and dispatch.",
+    "فحص نهائي للأبعاد والمظهر، ثم التسليم للمستودع للتغليف والشحن."
+  ],
+  [
+    "护板已完成加工，正在进行出厂检查。",
+    "Panel fabrication is complete. Final inspection is in progress.",
+    "اكتمل تصنيع لوح الحماية، والفحص النهائي جارٍ."
+  ],
+  [
+    "护板已完成加工，正在出厂检查。",
+    "Panel fabrication complete; final inspection underway.",
+    "اكتمل تصنيع لوح الحماية، والفحص النهائي جارٍ."
+  ],
+  [
+    "物流配送中，送达后售后专员会联系安装。",
+    "In transit. Your service specialist will arrange installation after delivery.",
+    "الشحنة في الطريق. سينسق مسؤول الخدمة التركيب بعد التسليم."
+  ],
+  [
+    "替换控制器已交承运商，正在运输。",
+    "The replacement controller is with the carrier and in transit.",
+    "تم تسليم وحدة التحكم البديلة إلى شركة الشحن، وهي في الطريق."
+  ],
+  [
+    "本项已处理完成，如有异常可继续联系售后。",
+    "This item is resolved. Contact us if you need further help.",
+    "اكتملت معالجة هذا البند. تواصل معنا إذا احتجت إلى مساعدة إضافية."
+  ],
+  [
+    "已完成参数调试，客户确认设备正常运行。",
+    "Setup completed. The customer confirmed normal operation.",
+    "اكتمل ضبط الإعدادات، وأكد العميل أن الجهاز يعمل بصورة طبيعية."
+  ],
+  [
+    "护板运输破损，已确认补发一套。",
+    "The panel was damaged in transit. One replacement set was approved.",
+    "تضرر لوح الحماية أثناء النقل، وتم تأكيد إرسال مجموعة بديلة واحدة."
+  ],
+  [
+    "设备无法启动，检测后确认更换控制器。",
+    "The equipment would not start. Inspection confirmed a controller replacement.",
+    "تعذر تشغيل الجهاز، وأكد الفحص ضرورة استبدال وحدة التحكم."
+  ],
+  [
+    "运行参数异常，已通过远程调试处理。",
+    "Incorrect operating settings were resolved through remote setup.",
+    "تمت معالجة إعدادات التشغيل غير الصحيحة عن بُعد."
+  ],
+  [
+    "10 月 19 日 10:20",
+    "19 Oct · 10:20 (UTC+8)",
+    "19 أكتوبر · 10:20 (UTC+8)"
+  ],
+  [
+    "10 月 18 日 16:40",
+    "18 Oct · 16:40 (UTC+8)",
+    "18 أكتوبر · 16:40 (UTC+8)"
+  ],
+  [
+    "10 月 17 日 14:30",
+    "17 Oct · 14:30 (UTC+8)",
+    "17 أكتوبر · 14:30 (UTC+8)"
+  ],
+  [
+    "10 月 16 日 · 09:15",
+    "16 Oct · 09:15 (UTC+8)",
+    "16 أكتوبر · 09:15 (UTC+8)"
+  ],
+  [
+    "3 项售后已受理，处理方案已与您确认。",
+    "All 3 items accepted. The service plan was confirmed with you.",
+    "تم قبول بنود الخدمة الثلاثة وتأكيد خطة المعالجة معك."
+  ],
+  [
+    "下一步",
+    "Next step",
+    "الخطوة التالية"
+  ],
+  [
+    "问题与照片",
+    "Issue and photos",
+    "المشكلة والصور"
+  ],
+  [
+    "查看物流",
+    "Track shipment",
+    "تتبع الشحنة"
+  ],
+  [
+    "张专员 · 您的售后联系人",
+    "Zhang · Your service specialist",
+    "تشانغ · مسؤول خدمتك"
+  ],
+  [
+    "有新情况，随时留言",
+    "Leave us an update anytime",
+    "اترك لنا رسالة في أي وقت"
+  ],
+  [
+    "联系售后",
+    "Contact us",
+    "تواصل معنا"
+  ],
+  [
+    "给售后专员留言",
+    "Message your specialist",
+    "راسل مسؤول الخدمة"
+  ],
+  [
+    "关闭留言",
+    "Close message",
+    "إغلاق الرسالة"
+  ],
+  [
+    "留言将关联此订单，方便专员继续跟进。",
+    "Your message stays with this order so we can follow up.",
+    "ستُربط رسالتك بهذا الطلب لتسهيل المتابعة."
+  ],
+  [
+    "留言内容",
+    "Your message",
+    "رسالتك"
+  ],
+  [
+    "请描述需要补充的情况…",
+    "Tell us what you would like to add…",
+    "أخبرنا بالمعلومات التي تود إضافتها…"
+  ],
+  [
+    "发送留言",
+    "Send message",
+    "إرسال الرسالة"
+  ],
+  [
+    "仅展示您项目的售后信息",
+    "Only your project’s service information is shown",
+    "تُعرض معلومات الخدمة الخاصة بمشروعك فقط"
+  ],
+  [
+    "重新验证",
+    "Verify again",
+    "التحقق مجدداً"
+  ],
+  [
+    "交互演示：请输入 246810；不会发送真实邮件。",
+    "Demo: enter 246810. No real email is sent.",
+    "عرض تجريبي: أدخل 246810. لن يُرسل بريد فعلي."
+  ],
+  [
+    "请使用演示验证码 246810。",
+    "Use the demo code 246810.",
+    "استخدم رمز العرض التجريبي 246810."
+  ],
+  [
+    "示例物流：运输中 · 已离开发货仓，预计 10 月 21 日送达。",
+    "Demo shipment: departed the warehouse. Estimated delivery: 21 Oct.",
+    "شحنة تجريبية: غادرت المستودع. التسليم المتوقع: 21 أكتوبر."
+  ],
+  [
+    "留言预览已记录；正式接入后将发送给售后专员。",
+    "Demo message recorded. Live messages will reach your service specialist.",
+    "تم تسجيل الرسالة التجريبية. ستصل الرسائل الفعلية إلى مسؤول الخدمة عند التشغيل."
+  ],
+  [
+    "查看原文",
+    "View original",
+    "عرض النص الأصلي"
+  ],
+  [
+    "当前环节：",
+    "Current stage: ",
+    "المرحلة الحالية: "
+  ],
+  [
+    "生产中",
+    "In production",
+    "قيد الإنتاج"
+  ],
+  [
+    "已发货",
+    "Shipped",
+    "تم الشحن"
+  ],
+  [
+    "已完成",
+    "Completed",
+    "مكتمل"
+  ],
+  [
+    "已受理",
+    "Accepted",
+    "تم الاستلام"
+  ],
+  [
+    "方案确认",
+    "Plan confirmed",
+    "تأكيد الخطة"
+  ],
+  [
+    "备料生产",
+    "Production",
+    "الإنتاج"
+  ],
+  [
+    "打包发货",
+    "Dispatch",
+    "الشحن"
+  ],
+  [
+    "安装",
+    "Installation",
+    "التركيب"
+  ],
+  [
+    "完成",
+    "Resolved",
+    "تم الحل"
+  ],
+  [
+    "收起",
+    "Less",
+    "إخفاء"
+  ],
+  [
+    "详情",
+    "Details",
+    "التفاصيل"
+  ],
+  [
+    "更新",
+    "Updated",
+    "تحديث"
+  ]
+]
