@@ -1,0 +1,19 @@
+import vm from 'node:vm';import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';import assert from 'node:assert/strict';import {spawnSync} from 'node:child_process';import {fileURLToPath,pathToFileURL} from 'node:url';import {createRequire} from 'node:module';
+import {readSchema,templateFields,slots} from '../scripts/intake/shared.mjs';
+const s=await readSchema();assert.deepEqual(s.fields.find(f=>f.key==='stage').options,['审核']);assert.equal(s.fields.find(f=>f.key==='stage').default,'审核');
+// Prove both update directions on a disposable project, leaving the published fixture untouched.
+const source=await fs.readFile(new URL('../app-fragment.html',import.meta.url),'utf8');const normal=source.slice(source.indexOf('function normalize(raw)'),source.indexOf('function addRecords('));const normalized=vm.runInNewContext(normal+';normalize({customer:"客户",project:"项目",issue:"问题",owner:"专员"})',{fields:s.fields,today:'2026-10-19',equipmentRecords:[],findCommercial:()=>null,commercialKeys:[]});assert.equal(normalized.stage,'审核');assert.equal(normalized.cause,'待确认');
+const temp=await fs.mkdtemp(path.join(os.tmpdir(),'yifun-intake-sync-'));const root=fileURLToPath(new URL('../',import.meta.url));
+try{
+ for(const rel of ['scripts/intake/shared.mjs','scripts/intake/sync.mjs','scripts/intake/check.mjs','lib/intake-schema.json','lib/workspace.mjs','app-fragment.html','public/templates/after-sales-import.xlsx']){await fs.mkdir(path.dirname(path.join(temp,rel)),{recursive:true});await fs.copyFile(path.join(root,rel),path.join(temp,rel))}
+ const run=(file,args=[])=>{const r=spawnSync(process.execPath,[path.join(temp,file),...args],{encoding:'utf8'});assert.equal(r.status,0,r.stderr||r.stdout)};
+ let html=await fs.readFile(path.join(temp,'app-fragment.html'),'utf8');const edited=structuredClone(s),cause=edited.fields.find(f=>f.key==='cause');cause.label='售后原因测试';cause.options.push('测试选项');cause.required=true;
+ html=html.replace(/(<script id="yifun-intake-schema" type="application\/json">)[\s\S]*?(<\/script>)/,(_,a,b)=>a+JSON.stringify(edited)+b);await fs.writeFile(path.join(temp,'app-fragment.html'),html);
+ run('scripts/intake/sync.mjs',['--from-form']);run('scripts/intake/check.mjs');let synced=JSON.parse(await fs.readFile(path.join(temp,'lib/intake-schema.json'),'utf8'));assert.equal(synced.fields.find(f=>f.key==='cause').label,'售后原因测试');assert(synced.fields.find(f=>f.key==='cause').aliases.includes('售后原因'));
+ const require=createRequire(path.join(os.homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json'));const {FileBlob,SpreadsheetFile}=await import(pathToFileURL(require.resolve('@oai/artifact-tool')).href);const file=path.join(temp,'public/templates/after-sales-import.xlsx'),wb=await SpreadsheetFile.importXlsx(await FileBlob.load(file));
+ const sh=wb.worksheets.getItem('售后记录单');sh.getRange('I14').values=[['原因核实']];sh.getRange('K14:L14').dataValidation={rule:{type:'list',values:['安装缺陷','设计缺陷']}};wb.recalculate();await(await SpreadsheetFile.exportXlsx(wb)).save(file);
+ const stale=spawnSync(process.execPath,[path.join(temp,'scripts/intake/check.mjs')],{encoding:'utf8'});assert.notEqual(stale.status,0,'Unsynchronized Excel must block publishing');
+ run('scripts/intake/sync.mjs',['--from-template']);run('scripts/intake/check.mjs');synced=JSON.parse(await fs.readFile(path.join(temp,'lib/intake-schema.json'),'utf8'));const result=synced.fields.find(f=>f.key==='cause');assert.equal(result.label,'原因核实');assert.equal(!!result.required,false);assert.deepEqual(result.options,['安装缺陷','设计缺陷']);assert(result.aliases.includes('售后原因'));
+ assert.equal(templateFields(s).length,new Set(slots(s).map(x=>x.key)).size);
+ console.log('Intake workflow passed: form-to-template, one-block template-to-form, required rules, options, label aliases and stale publication guard.');
+}finally{await fs.rm(temp,{recursive:true,force:true})}

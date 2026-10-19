@@ -679,6 +679,7 @@ if(globalThis.Tweak){const settings={compact:false};const tweak=new Tweak({conta
 <script>window.__yifunHub.ready();</script>
 
 </main></div>
+<script id="yifun-intake-schema" type="application/json">{"version":1,"fields":[{"key":"project","label":"项目名称","required":true,"group":0},{"key":"customer","label":"客户名称","required":true,"group":0},{"key":"order","label":"原订单编号","group":0},{"key":"country","label":"国家 / 地区","group":0},{"key":"contact","label":"客户联系人","group":0},{"key":"phone","label":"联系电话","group":0},{"key":"whatsapp","label":"WhatsApp / 微信","group":0},{"key":"address","label":"项目详细地址","group":0},{"key":"reported","label":"报修日期","type":"date","value":"@today","group":0},{"key":"product","label":"产品名称 / 编号","group":1},{"key":"delivered","label":"设备交付日期","type":"date","group":1},{"key":"issueType","label":"问题分类","options":["待分类","设备故障","安装调试","缺件补发","外观破损","其他"],"group":1},{"key":"cause","label":"售后原因","options":["待确认","安装缺陷","设计缺陷","工程下单缺陷","生产缺陷","人为损坏"],"group":1},{"key":"grade","label":"问题等级","options":["待评估","S","A","B","C"],"group":1},{"key":"issue","label":"问题描述","type":"textarea","required":true,"group":1},{"key":"feedback","label":"客户反馈 / 当前处理记录","type":"textarea","group":1},{"key":"evidence","label":"照片 / 视频链接","group":1},{"key":"owner","label":"售后负责人","required":true,"group":1},{"key":"planned","label":"计划完成时间","type":"date","group":2},{"key":"stage","label":"当前阶段","options":["审核"],"group":2,"default":"审核"},{"key":"sales","label":"商务","group":2},{"key":"designer","label":"设计师","group":2},{"key":"engineer","label":"工程师","group":2},{"key":"installer","label":"安装人员","group":2},{"key":"method","label":"执行方式","options":["待确定","客户自行处理","当地工人处理","公司师傅上门"],"group":2},{"key":"cost","label":"费用承担","options":["待确认","亦玩承担","客户承担","双方分摊"],"group":2},{"key":"actual","label":"实际完成时间","type":"date","group":2},{"key":"next","label":"下一步","group":2},{"key":"contractType","label":"合同期限类型","options":["待核实","固定期限","无固定截止日"],"group":3},{"key":"contractStart","label":"合同开始日期","type":"date","group":3},{"key":"contractEnd","label":"合同截止日期","type":"date","group":3},{"key":"warrantyPolicy","label":"是否约定保修","options":["待核实","有保修","无保修"],"group":3},{"key":"warrantyBasis","label":"保修起算依据","options":["待核实","按交付日起算","按验收日起算","按合同其他约定起算"],"group":3},{"key":"warrantyStart","label":"保修开始日期","type":"date","group":3},{"key":"warrantyEnd","label":"保修截止日期","type":"date","group":3}],"templateExtras":[{"key":"warrantyMode","label":"保修资料填写方式","options":["自动读取","手工填写"]},{"key":"manualWarrantyStart","label":"保修开始日期","type":"date"},{"key":"manualWarrantyEnd","label":"保修截止日期","type":"date"},{"key":"evidenceMode","label":"附件提供方式","options":["上传照片 / 视频","照片 / 视频链接"]}],"layout":{"common":{"project":[2,2],"customer":[2,8],"order":[3,2],"country":[3,8],"contact":[4,2],"phone":[4,6],"whatsapp":[4,10],"address":[5,2],"reported":[6,2],"warrantyMode":[6,6],"manualWarrantyEnd":[6,10],"manualWarrantyStart":[7,2]},"detail":{"product":[1,2],"delivered":[1,6],"issueType":[1,10],"grade":[2,2],"owner":[2,6],"planned":[2,10],"issue":[3,2],"feedback":[4,2],"cause":[4,10],"evidenceMode":[5,2],"evidence":[5,6],"stage":[6,2],"actual":[6,6],"next":[6,10],"sales":[7,2],"designer":[7,6],"engineer":[7,10],"installer":[8,2],"method":[8,6],"cost":[8,10]}},"workflow":{"stages":["登记草稿","部门处理","品质检验","审核","工程下单","生产采购","发货物流","现场处理","客户验收","负责人复核","已关闭"]}}</script>
 <script>
 (()=>{
 const root=document.getElementById('yw-after-sales');
@@ -686,9 +687,9 @@ const $=s=>root.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const today='2026-10-15';
 const navs=['售后驾驶舱','售后工单中心','售后审核中心','工程下单中心','采购中心','生产中心','仓库与物流中心','安装中心','财务中心'];
-const stages=['登记草稿','部门处理','品质检验','审核','工程下单','生产采购','发货物流','现场处理','客户验收','负责人复核','已关闭'];
-const methods=['待确定','客户自行处理','当地工人处理','公司师傅上门'];
-const costs=['待确认','亦玩承担','客户承担','双方分摊'];
+const stages=JSON.parse(document.getElementById('yifun-intake-schema').textContent).workflow.stages;
+const methods=JSON.parse(document.getElementById('yifun-intake-schema').textContent).fields.find(f=>f.key==='method').options;
+const costs=JSON.parse(document.getElementById('yifun-intake-schema').textContent).fields.find(f=>f.key==='cost').options;
 const seed=[
 ['0024','示例项目 A','阿联酋','电机异常','现场处理','张售后','2026-10-14','S','公司师傅上门','待确认','2026-01-01','2026-12-31','林商务','陈设计','周工程','刘师傅','现场发现电机异响，等待技术评估。','技术评估与现场排查'],
 ['0021','示例项目 B','沙特','配件补发','生产采购','李生产','2026-10-12','B','客户自行处理','亦玩承担','2026-03-01','2027-02-28','王商务','林设计','吴工程','客户人员','客户反馈缺少配件，补件生产交期尚未确认。','确认补件完工时间'],
@@ -727,49 +728,9 @@ const icons=['layout-dashboard','clipboard-list','clipboard-check','drafting-com
 $('nav').innerHTML=navs.map((n,i)=>`<button type="button" class="cursor-interaction" data-nav="${n}"><i data-lucide="${icons[i]}" aria-hidden="true"></i>${n}</button>`).join('');
 function iconsRefresh(){if(globalThis.lucide)lucide.createIcons({attrs:{width:15,height:15}})}
 iconsRefresh();
-const fields=[
-{key:'project',label:'项目名称',required:true,group:0},
-{key:'customer',label:'客户名称',required:true,group:0},
-{key:'order',label:'原订单编号',group:0},
-{key:'country',label:'国家 / 地区',group:0},
-{key:'contact',label:'客户联系人',group:0},
-{key:'phone',label:'联系电话',group:0},
-{key:'whatsapp',label:'WhatsApp / 微信',group:0},
-{key:'address',label:'项目详细地址',group:0},
-{key:'reported',label:'报修日期',type:'date',value:today,group:0},
-{key:'product',label:'产品名称 / 编号',group:1},
-{key:'delivered',label:'设备交付日期',type:'date',group:1},
-{key:'issueType',label:'问题分类',options:['待分类','设备故障','安装调试','缺件补发','外观破损','其他'],group:1},
-{key:'cause',label:'售后原因',options:['待确认','安装缺陷','设计缺陷','工程下单缺陷','生产缺陷','人为损坏'],group:1},
-{key:'grade',label:'问题等级',options:['待评估','S','A','B','C'],group:1},
-{key:'issue',label:'问题描述',type:'textarea',required:true,group:1},
-{key:'feedback',label:'客户反馈 / 当前处理记录',type:'textarea',group:1},
-{key:'evidence',label:'照片 / 视频链接',group:1},
-{key:'owner',label:'售后负责人',required:true,group:1},
-{key:'planned',label:'计划完成时间',type:'date',group:2},
-{key:'stage',label:'当前阶段',options:stages,group:2},
-{key:'sales',label:'商务',group:2},
-{key:'designer',label:'设计师',group:2},
-{key:'engineer',label:'工程师',group:2},
-{key:'installer',label:'安装人员',group:2},
-{key:'method',label:'执行方式',options:methods,group:2},
-{key:'cost',label:'费用承担',options:costs,group:2},
-{key:'actual',label:'实际完成时间',type:'date',group:2},
-{key:'next',label:'下一步',group:2},
-{key:'contractType',label:'合同期限类型',options:['待核实','固定期限','无固定截止日'],group:3},
-{key:'contractStart',label:'合同开始日期',type:'date',group:3},
-{key:'contractEnd',label:'合同截止日期',type:'date',group:3},
-{key:'warrantyPolicy',label:'是否约定保修',options:['待核实','有保修','无保修'],group:3},
-{key:'warrantyBasis',label:'保修起算依据',options:['待核实','按交付日起算','按验收日起算','按合同其他约定起算'],group:3},
-{key:'warrantyStart',label:'保修开始日期',type:'date',group:3},
-{key:'warrantyEnd',label:'保修截止日期',type:'date',group:3}];
-function getTemplateFields(){return [
-...fields.filter(f=>f.group===0),
-{key:'warrantyMode',label:'保修资料填写方式',options:['自动读取','手工填写']},
-{key:'manualWarrantyStart',label:'保修开始日期',type:'date'},
-{key:'manualWarrantyEnd',label:'保修截止日期',type:'date'},
-...fields.filter(f=>f.group===1).flatMap(f=>f.key==='evidence'?[{key:'evidenceMode',label:'附件提供方式',options:['上传照片 / 视频','照片 / 视频链接']},f]:[f]),
-...fields.filter(f=>f.group===2)];}
+const intakeSchema=JSON.parse(document.getElementById('yifun-intake-schema').textContent);
+const fields=intakeSchema.fields.map(f=>({...f,...(f.value==='@today'?{value:today}:{})}));
+function getTemplateFields(){return [...fields.filter(f=>f.group===0),...intakeSchema.templateExtras.filter(f=>f.key!=='evidenceMode'),...fields.filter(f=>f.group===1).flatMap(f=>f.key==='evidence'?[intakeSchema.templateExtras.find(x=>x.key==='evidenceMode'),f]:[f]),...fields.filter(f=>f.group===2)];}
 $('#yw-manual').innerHTML=[0,1,2].map(g=>`<fieldset><legend>${['客户与项目','售后问题与反馈','跟踪与责任信息','合同与保修（分别记录）'][g]}</legend><div class="form-grid">${fields.filter(f=>f.group===g).map(f=>`<label class="form-field ${f.type==='textarea'?'wide':''}">${f.label}${f.required?' *':''}${f.options?`<select name="${f.key}">${f.options.map(o=>`<option>${o}</option>`).join('')}</select>`:f.type==='textarea'?`<textarea name="${f.key}" maxlength="2000" ${f.required?'required':''}></textarea>`:`<input name="${f.key}" type="${f.type||'text'}" ${f.required?'required':''} ${f.type==='date'?`value="${f.value||''}"`:'maxlength="200"'}>`}</label>`).join('')}</div></fieldset>`).join('')+`<div id="yw-manual-error" class="import-errors" role="alert"></div><div class="entry-actions"><button class="primary cursor-interaction" type="submit">确认登记并生成工单</button><button class="cursor-interaction" type="button" data-entry-cancel>取消</button><small>* 必填；工单编号自动生成</small></div>`;
 const usageNote=document.createElement('small');usageNote.id='yw-device-age';usageNote.className='device-age';usageNote.setAttribute('aria-live','polite');$('#yw-manual [name="delivered"]').closest('label').appendChild(usageNote);
 let deliveryFromDevice=false;
@@ -948,16 +909,15 @@ function validDate(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;const d=new
 function validate(d){
 const errors=[];
 if(d.stage!=='审核')errors.push('新登记工单必须先审核，请将当前阶段填写为审核；不能直接进入生产。');
-for(const key of ['customer','project','issue','owner'])if(!String(d[key]||'').trim())errors.push(({customer:'客户名称',project:'项目名称',issue:'问题描述',owner:'售后负责人'})[key]+'必填');
+for(const f of fields.filter(f=>f.required))if(!String(d[f.key]||'').trim())errors.push(f.label+'必填');
+for(const f of fields.filter(f=>f.options))if(d[f.key]&&!f.options.includes(d[f.key]))errors.push(f.label+'不在允许选项内');
 for(const key of ['reported','delivered','planned','contractStart','contractEnd','warrantyStart','warrantyEnd','actual'])if(d[key]&&!validDate(d[key]))errors.push((fields.find(f=>f.key===key)?.label||key)+'须为 YYYY-MM-DD');
 if(d.contractStart&&d.contractEnd&&d.contractStart>d.contractEnd)errors.push('合同截止日期不能早于开始日期');
 if(d.warrantyStart&&d.warrantyEnd&&d.warrantyStart>d.warrantyEnd)errors.push('保修截止日期不能早于保修开始日期');
 if(d.warrantyPolicy==='无保修'&&(d.warrantyStart||d.warrantyEnd))errors.push('无保修约定时不应填写保修日期');
 if(d.delivered&&d.reported&&validDate(d.delivered)&&validDate(d.reported)&&d.delivered>d.reported)errors.push('设备交付日期不能晚于报修日期');
 if(d.actual&&d.reported&&d.actual<d.reported)errors.push('实际完成时间不能早于报修日期');
-if(d.cause&&!fields.find(f=>f.key==='cause').options.includes(d.cause))errors.push('售后原因不在允许选项内');
 if(!stages.includes(d.stage))errors.push('当前阶段不在允许选项内');
-if(!['待评估','S','A','B','C'].includes(d.grade))errors.push('问题等级须为待评估、S、A、B、C');
 if(!methods.includes(d.method))errors.push('执行方式不在允许选项内');
 if(!costs.includes(d.cost))errors.push('费用承担不在允许选项内');
 for(const key of ['contractType','warrantyPolicy','warrantyBasis'])if(!fields.find(f=>f.key===key).options.includes(d[key]))errors.push(fields.find(f=>f.key===key).label+'不在允许选项内');
@@ -965,7 +925,7 @@ if(d.stage==='已关闭'&&!d.actual)errors.push('已关闭工单需要实际完�
 return errors;
 }
 function normalize(raw){
-const d={};for(const f of fields)d[f.key]=String(raw[f.key]??'').trim();
+const d={};for(const f of fields){d[f.key]=String(raw[f.key]??'').trim();if(f.options&&!d[f.key])d[f.key]=f.default||f.options[0];}
 d.warrantyMode=['manual','手工填写'].includes(raw.warrantyMode)?'manual':'auto';d.reported ||= today;d.stage ||= '审核';d.grade=d.grade.replace(/级$/,'')||'待评估';d.method ||= '待确定';d.cost ||= '待确认';d.issueType ||= '待分类';d.cause ||= '待确认';d.warrantyPolicy ||= '待核实';d.warrantyBasis ||= '待核实';d.contractType ||= (d.contractStart||d.contractEnd)?'固定期限':'待核实';if(!d.delivered){const devices=equipmentRecords.filter(x=>x.customer===d.customer&&x.project===d.project&&x.order===d.order&&x.product===d.product);if(devices.length===1)d.delivered=devices[0].delivered||'';}const master=findCommercial(d);if(master)for(const k of ['contact','phone','whatsapp','address','country','sales','designer','engineer','installer'])d[k] ||= master[k]||'';for(const k of commercialKeys)d[k]=master?.[k]||(['contractType','warrantyPolicy','warrantyBasis'].includes(k)?'待核实':'');d.warrantySource='自动读取商务记录';if(d.warrantyMode==='manual'){d.warrantyPolicy='有保修';d.warrantyBasis='按合同其他约定起算';d.warrantyStart=String(raw.manualWarrantyStart||'').trim();d.warrantyEnd=String(raw.manualWarrantyEnd||'').trim();d.warrantySource='手工填写';}return d;
 }
 function addRecords(records,source,keepOpen=false){
@@ -984,10 +944,8 @@ if(globalThis.XLSX)return Promise.resolve(globalThis.XLSX);if(xlsxPromise)return
 xlsxPromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';script.onload=()=>resolve(globalThis.XLSX);script.onerror=()=>{xlsxPromise=null;reject(new Error('Excel 组件加载失败，可改用 CSV 文件导入。'))};root.appendChild(script)});return xlsxPromise;
 }
 const aliases={'WhatsApp':'whatsapp','WhatsApp/微信':'whatsapp','设备交付时间':'delivered','保修资料填写方式':'warrantyMode','客户联系人 / 联系方式':'contact','保修开始日期':'manualWarrantyStart','保修截止日期':'manualWarrantyEnd','手工保修开始日期':'manualWarrantyStart','手工保修截止日期':'manualWarrantyEnd','质保开始日期':'warrantyStart','质保截止日期':'warrantyEnd','质保起算依据':'warrantyBasis','负责人':'owner','问题与反馈':'issue','售后问题':'issue','反馈与处理记录':'feedback','反馈记录':'feedback','计划完成':'planned','实际完时间':'actual','实际完成日期':'actual','报修时间':'reported','订单编号':'order','国家':'country','客户':'customer'};
-const headerKey=h=>aliases[h]||getTemplateFields().find(f=>f.label===h)?.key||fields.find(f=>f.label===h)?.key;
-function compactLayout(){return {
-common:{project:[2,2],customer:[2,8],order:[3,2],country:[3,8],contact:[4,2],phone:[4,6],whatsapp:[4,10],address:[5,2],reported:[6,2],warrantyMode:[6,6],manualWarrantyEnd:[6,10],manualWarrantyStart:[7,2]},
-detail:{product:[1,2],delivered:[1,6],issueType:[1,10],grade:[2,2],owner:[2,6],planned:[2,10],issue:[3,2],feedback:[4,2],cause:[4,10],evidenceMode:[5,2],evidence:[5,6],stage:[6,2],actual:[6,6],next:[6,10],sales:[7,2],designer:[7,6],engineer:[7,10],installer:[8,2],method:[8,6],cost:[8,10]}};}
+const headerKey=h=>getTemplateFields().find(f=>f.aliases?.includes(h))?.key||aliases[h]||getTemplateFields().find(f=>f.label===h)?.key||fields.find(f=>f.label===h)?.key;
+function compactLayout(){return intakeSchema.layout;}
 function readCompactForm(rows){
 const layout=compactLayout(),shared={},records=[],sources=[];
 for(const [key,[r,c]] of Object.entries(layout.common))shared[key]=rows[r]?.[c]??'';
