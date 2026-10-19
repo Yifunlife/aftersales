@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';import vm from 'node:vm';import fs from 'node:fs';
+const html=fs.readFileSync(new URL('../app-fragment.html',import.meta.url),'utf8');
+const calc=html.slice(html.indexOf("const costKeys="),html.indexOf("function costForm("));
+const save=html.slice(html.indexOf('function saveInstallCost('),html.indexOf("root.addEventListener('input',e=>{if(e.target.closest('[data-form=\"costs\"]'))"));
+const rows=[];let writes=0;const finance={snapshot:()=>({rows}),upsertDepartmentCost:e=>{writes++;const old=rows.find(r=>r.id===e.id);if(old)Object.assign(old,e);else rows.push({...e,paid:0})}};
+const context={window:{departmentHub:{finance}}};vm.createContext(context);vm.runInContext(calc+save,context);
+const raw={hours:'16',rate:'50',meal:'120',hotel:'300',travel:'80',person:'测试填报人',date:'2026-10-19',note:'测试'};
+assert.equal(context.costValues(raw).total,130000);assert.equal(context.costValues({...raw,hours:'0.25',rate:'0.10',meal:0,hotel:0,travel:0}).labor,3);
+for(const value of ['', '-1', 'NaN','1.234','Infinity','1e4'])assert.throws(()=>context.costValues({...raw,meal:value}));
+const order={id:'SH-test',orderId:'ORDER-test',project:'测试项目',scope:'更换配件',servicePerson:'测试专员',status:'安装中'};
+context.saveInstallCost(order,raw);assert.equal(rows.length,4);assert.equal(rows.reduce((s,r)=>s+r.amount,0),130000);assert(rows.every(r=>r.orderId==='ORDER-test'&&r.serviceId==='SH-test'));
+context.saveInstallCost(order,{...raw,meal:'150'});assert.equal(rows.length,4);assert.equal(rows.reduce((s,r)=>s+r.amount,0),133000);
+rows.find(r=>r.category==='行').paid=8000;const before=writes;assert.throws(()=>context.saveInstallCost(order,{...raw,travel:'50'}));assert.equal(writes,before,'paid amount rejection must happen before all writes');
+const compact=html.slice(html.indexOf('function compactLayout()'),html.indexOf('function prepareImport('));const fields=vm.runInNewContext(html.slice(html.indexOf('const fields=[\n'),html.indexOf('function getTemplateFields()'))+';fields',{today:'2026-10-19',stages:[],methods:[],costs:[]});
+const parser=vm.runInNewContext(compact+';readCompactForm',{getTemplateFields:()=>fields});const data=Array.from({length:19},()=>[]);data[9][0]='售后问题 1';data[10][2]='产品';data[13][2]='客户反馈';data[13][10]='生产缺陷';const parsed=parser(data);assert.equal(parsed.rows[1][parsed.rows[0].indexOf('售后原因')],'生产缺陷');data[13][10]='';assert.equal(parser(data).rows[1][parsed.rows[0].indexOf('售后原因')],'');
+console.log('Installation costs: cent rounding, invalid values, repeat updates, original-order linkage, paid guard and cause template imports passed.');
