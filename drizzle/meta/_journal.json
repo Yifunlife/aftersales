@@ -15,6 +15,13 @@
       "when": 1792331560537,
       "tag": "0001_clumsy_bug",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792387576931,
+      "tag": "0002_pink_stark_industries",
+      "breakpoints": true
     }
   ]
 }

@@ -11,3 +11,5 @@ import { checkIntake } from './scripts/intake/check.mjs';
 await checkIntake();
 
 // Both synchronization directions are exercised separately by tests/intake-sync.mjs.
+
+import './tests/customer-intake.mjs';

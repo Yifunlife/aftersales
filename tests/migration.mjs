@@ -1,10 +1,11 @@
 import {DatabaseSync} from 'node:sqlite';
-import {readFileSync} from 'node:fs';
+import {readFileSync,readdirSync} from 'node:fs';
 import assert from 'node:assert/strict';
 const db=new DatabaseSync(':memory:');db.exec('PRAGMA foreign_keys=ON;');
 db.exec(readFileSync('drizzle/0000_skinny_ravenous.sql','utf8'));
 db.prepare('INSERT INTO employees VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run('existing','yw001','existing@example.test','原员工','采购人员',1,0,'saved-hash','saved-salt',3,1,1);
 db.prepare('INSERT INTO sessions VALUES(?,?,?,?)').run('original-token','existing',3,9999999999);
 db.exec('BEGIN;');db.exec(readFileSync('drizzle/0001_clumsy_bug.sql','utf8'));db.exec('COMMIT;');
+for(const file of readdirSync('drizzle').filter(f=>/^\d+.*\.sql$/.test(f)&&!f.startsWith('0000_')&&!f.startsWith('0001_')).sort())db.exec(readFileSync('drizzle/'+file,'utf8'));
 assert.equal(db.prepare('SELECT hash FROM employees').get().hash,'saved-hash');assert.equal(db.prepare('SELECT token FROM sessions').get().token,'original-token');assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(),[]);
 console.log('Migration passed with foreign keys enabled: existing credentials and sessions preserved.');
