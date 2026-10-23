@@ -21,10 +21,10 @@
 GitHub 主仓库：https://github.com/Yifunlife/aftersales ，发布分支 `main`。
 
 - Workers 运行工作台；D1 `yifun-aftersales-workspace` 只存账号、客户、工单和附件元数据。
-- R2 `yifun-aftersales-files` 保存客户与内部照片/视频。数据库只保存 object key、文件名、大小及受权限保护的访问链接，不保存 Base64、data URL 或 blob URL。
+- R2 `yifun-aftersales-files` 保存客户、员工手工录单、审核和现场处理的照片/视频。数据库只保存 object key、文件名、大小及受权限保护的访问链接，不保存 Base64、data URL 或 blob URL。
 - 页面品牌图片使用 `/media/` 静态资源链接，由 Cloudflare 静态资源服务提供。
 - 附件保持私有，通过 `/api/customer/file/:id` 验证员工会话或客户邀请后流式读取；不要将客户附件桶设为公开。
-- 原来的 `yifun-aftersales-db` / `yifun-aftersales-attachments` 与原 Sites 数据不变；新环境不自动继承旧账号、旧工单或邀请链接。旧库记录的业务字段需单独映射迁移。
+- 原来的 `yifun-aftersales-db` / `yifun-aftersales-attachments` 与原 Sites 数据不变；新环境不自动继承旧账号、旧工单或邀请链接。新版替换旧版 Worker 入口，旧库仅保留回退，不自动导入旧记录。
 
 首次发布：`npm ci`，然后 `npm run deploy:cloudflare`。配置见 `wrangler.cloudflare.json`，D1 migrations 从 `drizzle/` 应用。云端管理员通过部署密钥 `AUTH_OWNER_EMAIL`、`INITIAL_ADMIN_HASH`、`INITIAL_ADMIN_SALT` 初始化；密码只存加盐 PBKDF2 摘要。直接 Workers 部署会过滤客户端伪造的平台身份头。
 

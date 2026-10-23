@@ -41,6 +41,13 @@ const link2=await call('invites',{body:{customerId:c2}});const token2=new URL(li
 const marketSync=await call('profiles',{body:{...profile,contact:'更新后的客户联系人'}});assert.equal(marketSync.data.id,cid,'Stable market ID must update the existing customer instead of making a duplicate');assert.equal((await call('portal?token='+token,{user:null})).data.customer.contact,'更新后的客户联系人');
 await call('stores',{body:{id:sid,customerId:cid,name:'Renamed store',orderNo:'NEXT-ORDER-99'}});const historical=(await call('inbox')).data.requests.find(r=>r.id===rid);assert.equal(historical.order_no,'ORDER-42','Updating a store must preserve the original order on an existing service request');assert.equal((await call('portal?token='+token,{user:null})).data.stores[0].order_no,'NEXT-ORDER-99');
 await call('revoke-links',{body:{customerId:cid}});assert.equal((await call('portal?token='+token,{user:null})).status,403);
+const staffUpload=new FormData();staffUpload.append('files',new File([new Uint8Array([137,80,78,71])],'staff.png',{type:'image/png'}));
+assert.equal((await call('staff-files',{user:null,body:staffUpload})).status,401);
+const stored=await call('staff-files',{user:'buyer',body:staffUpload});assert.equal(stored.status,200);const staffFile=stored.data.files[0];
+assert.equal((await call('file/'+staffFile.id,{user:'staff'})).status,200);
+assert.equal((await call('file/'+staffFile.id+'?token='+token2,{user:null})).status,403,'Customer links cannot access staff workflow photos');
+assert.equal((await call('file/'+staffFile.id,{user:null})).status,401);
+const metadata=sqlite.prepare('SELECT * FROM staff_files WHERE id=?').get(staffFile.id);assert.equal(metadata.size,4);assert.equal(objects.get(metadata.object_key).length,4);assert(!JSON.stringify(metadata).includes('data:'));
 assert.deepEqual(sqlite.prepare('PRAGMA foreign_key_check').all(),[]);console.log('Customer intake passed: durable submission and files, store/profile autofill, customer isolation, scoped links, revocation, deduplication, supplement, specialist gate, reviewer handoff, cloud workflow persistence, employee permissions and private-field filtering.');
 // Saving one review draft must persist it without dispatching the whole report.
 const vm=await import('node:vm');const source=fs.readFileSync('app-fragment.html','utf8');const reviewSource=source.slice(source.indexOf('function saveReviewItem(form)'),source.indexOf('function dispatchReviewBatch('));

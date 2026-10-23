@@ -26,3 +26,8 @@ export const customerFiles=sqliteTable('customer_files',{
  id:text('id').primaryKey(),requestId:text('request_id').notNull().references(()=>customerRequests.id),objectKey:text('object_key').notNull(),name:text('name').notNull(),mime:text('mime').notNull(),size:integer('size').notNull()
 });
 export const customerRateLimits=sqliteTable('customer_rate_limits',{key:text('key').primaryKey(),attempts:integer('attempts').notNull(),until:integer('until').notNull()});
+
+// Attachments from staff-created workflows also live exclusively in R2.
+export const staffFiles=sqliteTable('staff_files',{
+ id:text('id').primaryKey(),objectKey:text('object_key').notNull(),name:text('name').notNull(),mime:text('mime').notNull(),size:integer('size').notNull(),uploadedBy:text('uploaded_by').notNull().references(()=>employees.id),createdAt:integer('created_at').notNull()
+});
