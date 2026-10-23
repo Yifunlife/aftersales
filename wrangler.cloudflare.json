@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "yifun-aftersales",
+  "main": "build/sites-worker.ts",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "vars": {
+    "STANDALONE_CLOUDFLARE": "true"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "yifun-aftersales-workspace",
+      "database_id": "908ee73c-bb02-4913-93eb-c2993cee5ef3",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "yifun-aftersales-files"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "account_id": "5a472d15dc37681abce4ab6e4eb152c3"
+}

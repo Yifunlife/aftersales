@@ -8,6 +8,7 @@ import { connectorPreview } from "./build/connector-preview-plugin.mjs";
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
 
+const standalone = process.env.DEPLOY_TARGET === "cloudflare";
 const { d1, r2 } = hostingConfig;
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
@@ -62,13 +63,14 @@ export default defineConfig(async ({ command }) => {
     },
     plugins: [
       vinext(),
-      sites({ mockAuth: !managedLinux }),
+      ...(!standalone ? [sites({ mockAuth: !managedLinux })] : []),
       connectorPreview(),
       cloudflare({
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
         inspectorPort: false,
+        ...(standalone ? { configPath: "wrangler.cloudflare.json" } : {}),
         config: {
-          ...localBindingConfig,
+          ...(!standalone ? localBindingConfig : {}),
           ...(command === "serve"
             ? {
                 services: [

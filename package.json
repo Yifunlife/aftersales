@@ -14,7 +14,9 @@
     "db:generate": "drizzle-kit generate",
     "intake:sync": "node scripts/intake/sync.mjs",
     "intake:check": "node scripts/intake/check.mjs",
-    "test:intake-sync": "node tests/intake-sync.mjs"
+    "test:intake-sync": "node tests/intake-sync.mjs",
+    "build:cloudflare": "DEPLOY_TARGET=cloudflare npm run build",
+    "deploy:cloudflare": "npm run build:cloudflare && wrangler d1 migrations apply DB --remote --config wrangler.cloudflare.json && wrangler deploy --config dist/server/wrangler.json"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -15,3 +15,19 @@
 `/customer` 是中文、English、العربية 三语示例查询页面，桌面分栏、手机逐项展开；Arabic 使用 RTL，型号与订单号保持 LTR。语言选择保存在浏览器偏好中，不保存客户邮箱、验证码或留言。`/customer-share` 为已登录员工展示示例链接及发送文案，可复制或打开邮件草稿。工作台顶部、售后订单进度标题旁均有发送入口。
 
 这两个页面当前仅使用固定示例订单，验证码 246810 为公开演示，不进行身份鉴权、不发送邮件、不提供实际订单信息。生产环境真实客户访问需要另行接入共享订单数据库、授权邮件和一次性验证码服务，不能使用当前示例页处理真实客户资料。
+
+## 独立 Cloudflare 部署
+
+GitHub 主仓库：https://github.com/Yifunlife/aftersales ，发布分支 `main`。
+
+- Workers 运行工作台；D1 `yifun-aftersales-workspace` 只存账号、客户、工单和附件元数据。
+- R2 `yifun-aftersales-files` 保存客户与内部照片/视频。数据库只保存 object key、文件名、大小及受权限保护的访问链接，不保存 Base64、data URL 或 blob URL。
+- 页面品牌图片使用 `/media/` 静态资源链接，由 Cloudflare 静态资源服务提供。
+- 附件保持私有，通过 `/api/customer/file/:id` 验证员工会话或客户邀请后流式读取；不要将客户附件桶设为公开。
+- 原来的 `yifun-aftersales-db` / `yifun-aftersales-attachments` 与原 Sites 数据不变；新环境不自动继承旧账号、旧工单或邀请链接。旧库记录的业务字段需单独映射迁移。
+
+首次发布：`npm ci`，然后 `npm run deploy:cloudflare`。配置见 `wrangler.cloudflare.json`，D1 migrations 从 `drizzle/` 应用。云端管理员通过部署密钥 `AUTH_OWNER_EMAIL`、`INITIAL_ADMIN_HASH`、`INITIAL_ADMIN_SALT` 初始化；密码只存加盐 PBKDF2 摘要。直接 Workers 部署会过滤客户端伪造的平台身份头。
+
+`.github/workflows/cloudflare.yml` 在 main 更新时验证、构建、应用迁移和发布。启用自动发布需在 GitHub 仓库 Secrets 添加 `CLOUDFLARE_API_TOKEN`，限本账号的 Workers Scripts Edit、D1 Edit、Workers R2 Storage Edit；不得提交令牌、密码、数据库导出或 R2 文件到 Git。
+
+发布前运行 `node check.mjs`。表单字段变更还需 `npm run test:intake-sync`。生产数据库备份可使用 `wrangler d1 export DB --remote --config wrangler.cloudflare.json --output <私有备份路径>`；备份不进入仓库。大文件请使用附件上传或外部 http(s) 链接，现有单文件 10MB / 每次 20MB 限制仍有效。

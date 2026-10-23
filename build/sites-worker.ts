@@ -4,6 +4,14 @@ import type { ConnectorBinding } from "../lib/connector-contract.mjs";
 
 export default {
   fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
+    // Public Workers must never trust identity headers supplied by a client.
+    if ((env as any).STANDALONE_CLOUDFLARE === "true") {
+      const headers = new Headers(request.headers);
+      for (const name of [...headers.keys()]) {
+        if (name.toLowerCase().startsWith("oai-authenticated-user-")) headers.delete(name);
+      }
+      request = new Request(request, { headers });
+    }
     let binding = ctx.props?.CONNECTORS;
     // Local preview emulates the same request-scoped capability. This branch and
     // the auxiliary service binding are absent from production builds.
