@@ -31,3 +31,5 @@ GitHub 主仓库：https://github.com/Yifunlife/aftersales ，发布分支 `main
 `.github/workflows/cloudflare.yml` 在 main 更新时验证、构建、应用迁移和发布。启用自动发布需在 GitHub 仓库 Secrets 添加 `CLOUDFLARE_API_TOKEN`，限本账号的 Workers Scripts Edit、D1 Edit、Workers R2 Storage Edit；不得提交令牌、密码、数据库导出或 R2 文件到 Git。
 
 发布前运行 `node check.mjs`。表单字段变更还需 `npm run test:intake-sync`。生产数据库备份可使用 `wrangler d1 export DB --remote --config wrangler.cloudflare.json --output <私有备份路径>`；备份不进入仓库。大文件请使用附件上传或外部 http(s) 链接，现有单文件 10MB / 每次 20MB 限制仍有效。
+
+独立售后网站提供名为 `AftersalesReporting` 的 Cloudflare 私有服务入口，仅供绑定它的集团总看板读取正式工单、项目映射和申请数量；不公开在 HTTP API 路由中，不导出账号、口令、邀请链接或文件内容。总看板每天上海时间 08:00、18:00 自动同步，并提供手动同步。售后系统是流程状态的唯一修改来源。

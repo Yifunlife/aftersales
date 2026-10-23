@@ -34,3 +34,18 @@ export default {
     return runWithConnectorBinding(binding, () => handler.fetch(request, env, ctx));
   },
 };
+
+// Only Workers explicitly bound to this named entrypoint can fetch this projection.
+// The public application handler above does not expose this endpoint.
+import { WorkerEntrypoint } from 'cloudflare:workers';
+import { reportingSnapshot } from '../lib/reporting.mjs';
+export class AftersalesReporting extends WorkerEntrypoint<Cloudflare.Env> {
+  async fetch(request: Request) {
+    if (request.method !== 'GET' || new URL(request.url).pathname !== '/snapshot') return new Response(null, {status:404});
+    const body = JSON.stringify(await reportingSnapshot(this.env.DB));
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body));
+    const etag = '"'+Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,'0')).join('')+'"';
+    if (request.headers.get('If-None-Match') === etag) return new Response(null, {status:304,headers:{ETag:etag}});
+    return new Response(body,{headers:{'Content-Type':'application/json','Cache-Control':'no-store',ETag:etag}});
+  }
+}
