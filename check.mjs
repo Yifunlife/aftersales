@@ -15,3 +15,5 @@ await checkIntake();
 import './tests/customer-intake.mjs';
 
 import './tests/reporting.mjs';
+
+import './tests/customer-self-service.mjs';

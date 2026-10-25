@@ -1,7 +1,9 @@
+import {handleCustomerAuth} from '../../../lib/customer-auth.mjs';
+import {handleKnowledge} from '../../../lib/knowledge.mjs';
 import { env } from 'cloudflare:workers';
 import { getChatGPTUser } from '../../chatgpt-auth';
 import {handleCustomerIntake} from '../../../lib/customer-intake.mjs';
 import { handleAccounts } from '../../../lib/accounts.mjs';
 export const dynamic='force-dynamic';
-async function handle(request:Request){if(new URL(request.url).pathname.startsWith('/api/customer/'))return handleCustomerIntake(request,{db:env.DB,bucket:(env as any).BUCKET});return handleAccounts(request,{db:env.DB,ownerEmail:(env as any).AUTH_OWNER_EMAIL,identity:await getChatGPTUser(),initialAdmin:{hash:(env as any).INITIAL_ADMIN_HASH,salt:(env as any).INITIAL_ADMIN_SALT}});}
+async function handle(request:Request){const path=new URL(request.url).pathname;if(path.startsWith('/api/knowledge'))return handleKnowledge(request,{db:env.DB,bucket:(env as any).BUCKET});if(path.startsWith('/api/customer-auth/')||path==='/api/customer-accounts')return handleCustomerAuth(request,{db:env.DB});if(new URL(request.url).pathname.startsWith('/api/customer/'))return handleCustomerIntake(request,{db:env.DB,bucket:(env as any).BUCKET});return handleAccounts(request,{db:env.DB,ownerEmail:(env as any).AUTH_OWNER_EMAIL,identity:await getChatGPTUser(),initialAdmin:{hash:(env as any).INITIAL_ADMIN_HASH,salt:(env as any).INITIAL_ADMIN_SALT}});}
 export const GET=handle;export const POST=handle;

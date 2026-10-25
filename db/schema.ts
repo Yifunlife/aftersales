@@ -14,7 +14,7 @@ export const customerStores=sqliteTable('customer_stores',{
  id:text('id').primaryKey(),customerId:text('customer_id').notNull().references(()=>customerProfiles.id),marketId:text('market_id'),name:text('name').notNull(),orderNo:text('order_no').notNull(),address:text('address').notNull(),contact:text('contact').notNull(),email:text('email').notNull(),phone:text('phone').notNull(),updatedAt:integer('updated_at').notNull()
 },t=>[uniqueIndex('store_market_id_unique').on(t.marketId)]);
 export const customerInvites=sqliteTable('customer_invites',{
- id:text('id').primaryKey(),customerId:text('customer_id').notNull().references(()=>customerProfiles.id),tokenHash:text('token_hash').notNull(),active:integer('active').notNull().default(1),expires:integer('expires').notNull(),createdBy:text('created_by').notNull(),createdAt:integer('created_at').notNull()
+ id:text('id').primaryKey(),accessMode:text('access_mode').notNull().default('full'),requestId:text('request_id'),customerId:text('customer_id').notNull().references(()=>customerProfiles.id),tokenHash:text('token_hash').notNull(),active:integer('active').notNull().default(1),expires:integer('expires').notNull(),createdBy:text('created_by').notNull(),createdAt:integer('created_at').notNull()
 },t=>[uniqueIndex('customer_invite_token_unique').on(t.tokenHash)]);
 export const customerRequests=sqliteTable('customer_requests',{
  id:text('id').primaryKey(),customerId:text('customer_id').notNull().references(()=>customerProfiles.id),storeId:text('store_id').notNull().references(()=>customerStores.id),inviteId:text('invite_id').notNull().references(()=>customerInvites.id),submissionKey:text('submission_key').notNull(),status:text('status').notNull(),payload:text('payload').notNull(),note:text('note').notNull(),reviewerId:text('reviewer_id'),checkedBy:text('checked_by'),submittedAt:integer('submitted_at').notNull(),updatedAt:integer('updated_at').notNull()
@@ -31,3 +31,12 @@ export const customerRateLimits=sqliteTable('customer_rate_limits',{key:text('ke
 export const staffFiles=sqliteTable('staff_files',{
  id:text('id').primaryKey(),objectKey:text('object_key').notNull(),name:text('name').notNull(),mime:text('mime').notNull(),size:integer('size').notNull(),uploadedBy:text('uploaded_by').notNull().references(()=>employees.id),createdAt:integer('created_at').notNull()
 });
+
+export const customerAccounts=sqliteTable('customer_accounts',{
+ id:text('id').primaryKey(),customerId:text('customer_id').notNull().references(()=>customerProfiles.id),inviteId:text('invite_id').notNull().references(()=>customerInvites.id),username:text('username').notNull(),hash:text('hash').notNull(),salt:text('salt').notNull(),active:integer('active').notNull().default(1),mustChange:integer('must_change').notNull().default(1),version:integer('version').notNull().default(1),createdBy:text('created_by').notNull(),createdAt:integer('created_at').notNull(),updatedAt:integer('updated_at').notNull()
+},t=>[uniqueIndex('customer_username_unique').on(t.username)]);
+export const customerSessions=sqliteTable('customer_sessions',{token:text('token').primaryKey(),accountId:text('account_id').notNull().references(()=>customerAccounts.id,{onDelete:'cascade'}),version:integer('version').notNull(),expires:integer('expires').notNull()});
+export const knowledgeArticles=sqliteTable('knowledge_articles',{
+ id:text('id').primaryKey(),productCode:text('product_code').notNull(),productName:text('product_name').notNull(),title:text('title').notNull(),category:text('category').notNull(),summary:text('summary').notNull(),body:text('body').notNull(),links:text('links').notNull().default('[]'),status:text('status').notNull().default('draft'),language:text('language').notNull().default('zh'),version:integer('version').notNull().default(1),updatedBy:text('updated_by').notNull(),createdAt:integer('created_at').notNull(),updatedAt:integer('updated_at').notNull()
+});
+export const knowledgeFiles=sqliteTable('knowledge_files',{id:text('id').primaryKey(),articleId:text('article_id').notNull().references(()=>knowledgeArticles.id),objectKey:text('object_key').notNull(),name:text('name').notNull(),mime:text('mime').notNull(),size:integer('size').notNull()});
