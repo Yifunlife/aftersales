@@ -55,31 +55,10 @@ UMask=0077
 WantedBy=multi-user.target
 UNIT
 systemctl daemon-reload
-systemctl enable --now yifun-aftersales.service
+systemctl enable yifun-aftersales.service
+systemctl restart yifun-aftersales.service
 for attempt in $(seq 1 20); do if curl -fsS --max-time 2 http://127.0.0.1:3100/__health >/dev/null; then break; fi; sleep 1; done
 curl -fsS --max-time 5 http://127.0.0.1:3100/__health >/dev/null
-python3 - "$NGINX" <<'PY'
-from pathlib import Path
-import sys
-p=Path(sys.argv[1]);s=p.read_text()
-if 'location ^~ /_yifun-aftersales/' not in s:
-    marker='  location / {'
-    if s.count(marker)!=1:raise SystemExit('Unexpected central nginx configuration; no change applied')
-    block='''  location ^~ /_yifun-aftersales/ {
-    client_max_body_size 22m;
-    proxy_pass http://127.0.0.1:3100/;
-    proxy_http_version 1.1;
-    proxy_set_header Host yifun-aftersales.yifunlife.workers.dev;
-    proxy_set_header X-Forwarded-Proto https;
-    proxy_read_timeout 180s;
-    proxy_send_timeout 180s;
-    proxy_buffering off;
-  }
-'''
-    p.write_text(s.replace(marker,block+marker,1))
-PY
-if ! nginx -t; then cp -a "$BACKUP/central-nginx.conf" "$NGINX"; exit 1; fi
-systemctl reload nginx
-if ! curl -fsS --max-time 10 http://127.0.0.1:3000/api/auth/status >/dev/null; then cp -a "$BACKUP/central-nginx.conf" "$NGINX"; nginx -t && systemctl reload nginx; echo 'Central health failed; nginx restored'; exit 1; fi
+curl -fsS --max-time 10 http://127.0.0.1:3000/api/auth/status >/dev/null
 systemctl is-active yifun-aftersales.service yw-park-os.service
 printf 'Independent aftersales service installed. Central data untouched. Backup: %s\n' "$BACKUP"

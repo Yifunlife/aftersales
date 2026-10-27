@@ -8,7 +8,10 @@
   ],
   "workers_dev": true,
   "vars": {
-    "STANDALONE_CLOUDFLARE": "true"
+    "STANDALONE_CLOUDFLARE": "true",
+    "ALI_RESOURCE_HOST": "aftersales-resources.yifunlife.co",
+    "ALI_ORIGIN_URL": "https://aftersales-origin.yifunlife.cn",
+    "ALI_ORIGIN_ENABLED": "false"
   },
   "d1_databases": [
     {
@@ -35,5 +38,17 @@
     "crons": [
       "0 0 * * *"
     ]
-  }
+  },
+  "routes": [
+    {
+      "pattern": "aftersales-resources.yifunlife.co",
+      "custom_domain": true,
+      "zone_name": "yifunlife.co"
+    },
+    {
+      "pattern": "aftersales.yifunlife.co",
+      "custom_domain": true,
+      "zone_name": "yifunlife.co"
+    }
+  ]
 }
