@@ -56,3 +56,12 @@ class FormDataMock extends Map{constructor(form){super(Object.entries(form.value
 const ctx={error,data:[draft],FormData:FormDataMock,departments:['售后部'],today:'2026-10-19',validDate:v=>/^\d{4}-\d{2}-\d{2}$/.test(v),reviewEdits:new Map(),collapsedReviewItems:new Set(),render(){},notice(){},persist(){persisted++}};
 vm.createContext(ctx);vm.runInContext(reviewSource+';saveReviewItem({dataset:{workId:"draft-cloud"},values:{method:"检查固定点",reviewer:"审核员",needOrder:"no",nextOwner:"专员",planned:"2026-10-25"},querySelector:()=>error});',ctx);assert.equal(error.textContent,'');assert.equal(draft.reviewDraft.ready,true);assert.equal(draft.stage,'审核');assert.equal(persisted,1,'A saved review draft must be queued for cloud persistence');
 console.log('Customer review draft passed: save persists immediately; full dispatch still waits for all issue plans.');
+
+// Closure generates exactly one private, reviewable solution draft atomically.
+let closedWork=(await call('work-items',{user:'admin'})).data.items.find(x=>x.id===edited.id);
+closedWork={...closedWork,stage:'已关闭',review:{method:'测试修复：客户A customer@example.test +8613812345678'},history:[{action:'现场处理：更换测试部件'}]};
+assert.equal((await call('work-items',{user:'admin',body:{items:[closedWork]}})).status,200);
+const learned=sqlite.prepare("SELECT * FROM knowledge_articles WHERE summary LIKE '由已关闭工单%'").all();assert.equal(learned.length,1);assert.equal(learned[0].status,'draft');assert(learned[0].body.includes('更换测试部件'));assert(!learned[0].body.includes('customer@example.test'));assert(!learned[0].body.includes('客户A'));assert(!learned[0].body.includes('13812345678'));
+assert.equal((await call('work-items',{user:'admin',body:{items:[closedWork]}})).status,409);assert.equal(sqlite.prepare('SELECT count(*) AS n FROM knowledge_articles').get().n,1);
+closedWork.cloudVersion++;assert.equal((await call('work-items',{user:'admin',body:{items:[closedWork]}})).status,200);assert.equal(sqlite.prepare('SELECT count(*) AS n FROM knowledge_articles').get().n,1);
+console.log('Solution learning passed: atomic closure, deduplication, stale saves, private draft and contact redaction.');

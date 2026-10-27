@@ -1,3 +1,4 @@
+import {handleAssistant} from '../lib/assistant.mjs';
 import {handleUnifiedLogin} from '../lib/unified-auth.mjs';
 import {passwordHash} from '../lib/accounts.mjs';
 import assert from 'node:assert/strict';import {DatabaseSync} from 'node:sqlite';import fs from 'node:fs';
@@ -54,12 +55,29 @@ let saved=await call('/api/knowledge',{body:{...doc,id:did,version,status:'publi
 for(const q of ['YF-001','超级乐园','YF-001 问题'])assert.equal((await call('/api/knowledge?q='+encodeURIComponent(q),{employee:null,cookie:cookie1})).body.total,1);
 assert.equal((await call('/api/knowledge?q='+encodeURIComponent("' OR 1=1 --"),{employee:null,cookie:cookie1})).body.total,0);
 assert.equal((await call(docFile.url,{employee:null,cookie:cookie2})).status,200,'Published general product help is available to every authenticated customer');assert.equal((await call('/api/knowledge/'+did,{employee:null})).status,401);assert.equal((await call('/api/knowledge/'+did+'?token='+token,{employee:null})).status,200);
+// Assistant uses only published documents and customer-scoped progress.
+await call('/api/knowledge',{body:{...doc,title:'INTERNAL_ONLY_DRAFT',body:'INTERNAL_ONLY_DRAFT'}});
+let modelCalls=0,conversions=0,lastPrompt='';const ai={async run(model,input){modelCalls++;lastPrompt=JSON.stringify(input);return {response:'请核对产品说明并联系专员。'}},async toMarkdown(){conversions++;return {data:'PDF 内容：测试说明，仅供测试。'}}};
+async function assist(question,{cookie=cookie1,token:tk='',origin='https://test.local',model=ai,product='YF-001'}={}){const r=await handleAssistant(new Request('https://test.local/api/assistant'+(tk?'?token='+tk:''),{method:'POST',headers:{cookie,origin,'Content-Type':'application/json'},body:JSON.stringify({question,product})}),{db,bucket,ai:model});return {status:r.status,body:await r.json()}}
+assert.equal((await assist('测试',{cookie:''})).status,401);
+assert.equal((await assist('测试',{origin:'https://evil.test'})).status,403);
+let reply=await assist('如何使用？');assert.equal(reply.status,200);assert.equal(reply.body.mode,'ai');assert.equal(reply.body.sources.length,2);assert.equal(conversions,1);assert(lastPrompt.includes('PDF 内容'));
+assert.equal((await assist('再次查询',{product:'YF001'})).body.mode,'ai','Model matching tolerates hyphens');assert.equal(conversions,1,'Immutable PDF extraction is cached in private R2');
+assert.equal((await assist('其他',{product:'ABSENT-999'})).body.mode,'no-match');
+reply=await assist('查看我的售后进度',{product:''});assert.equal(reply.body.mode,'progress');assert(reply.body.progress.some(r=>r.id===submitted.body.id));assert(!JSON.stringify(reply.body).includes('contact@example.test'));
+reply=await assist('查看进度',{cookie:cookie2,product:''});assert.deepEqual(reply.body.progress,[],'Another company never receives these requests');
+reply=await assist('查看进度',{cookie:'',token});assert.deepEqual(reply.body.progress.map(x=>x.id),[delegated.body.id],'Guest link stays scoped to exactly one request');
+assert.equal((await assist('如何使用？',{model:null})).status,503);
+assert(!lastPrompt.includes('contact@example.test'));assert(!lastPrompt.includes('INTERNAL_ONLY_DRAFT'),'Drafts never enter model context');
+let limited;for(let i=0;i<31;i++)limited=await assist('测试限流',{cookie:cookies.buyer,product:'ABSENT-999'});assert.equal(limited.status,429);
+const callsBeforeDraft=modelCalls;assert.equal((await assist('无对应型号',{product:'NOMATCH-123'})).body.mode,'no-match');assert.equal(modelCalls,callsBeforeDraft,'No unsupported answer is generated without matching published sources');
 assert.equal((await call('/api/knowledge',{body:{...doc,id:did,version:1,status:'published'}})).status,409);
 assert.equal((await call('/api/knowledge',{body:{...doc,links:[{label:'bad',url:'javascript:alert(1)'}]}})).status,400);
 saved=await call('/api/knowledge',{body:{...doc,id:did,version,status:'published',body:'新版说明'}});version=saved.body.version;assert.equal((await call('/api/knowledge/'+did,{employee:null,cookie:cookie1})).body.article.body,'新版说明');
 const remove=await call('/api/knowledge/'+did+'/remove-file',{body:{fileId:docFile.id,version}});assert.equal(remove.status,200);version=remove.body.version;assert.equal((await call(docFile.url,{employee:null,cookie:cookie1})).status,404);
 saved=await call('/api/knowledge',{body:{...doc,id:did,version,status:'archived'}});assert.equal(saved.status,200);assert.equal((await call('/api/knowledge',{employee:null,cookie:cookie1})).body.total,0);
-assert.equal((await call('/api/customer-accounts',{body:{op:'reset',id:a1.body.id,version:1,password:'Reset-Client-1234'}})).status,409);assert.equal((await call('/api/customer-accounts',{body:{op:'reset',id:a1.body.id,version:2,password:'Reset-Client-1234'}})).status,200);assert.equal((await call('/api/customer-auth/status',{employee:null,cookie:cookie1})).body.user,null);assert.equal((await call('/api/customer-auth/login',{employee:null,body:{username:'supertada-test',password:'Customer-New-1234'}})).status,401);
+assert.equal((await assist('如何使用？')).body.mode,'no-match','Archived articles disappear immediately');
+assert.equal((await call('/api/customer-accounts',{body:{op:'reset',id:a1.body.id,version:1,password:'Reset-Client-1234'}})).status,409);assert.equal((await call('/api/customer-accounts',{body:{op:'reset',id:a1.body.id,version:2,password:'Reset-Client-1234'}})).status,200);assert.equal((await assist('测试')).status,401);assert.equal((await call('/api/customer-auth/status',{employee:null,cookie:cookie1})).body.user,null);assert.equal((await call('/api/customer-auth/login',{employee:null,body:{username:'supertada-test',password:'Customer-New-1234'}})).status,401);
 const resetLogin=await call('/api/customer-auth/login',{employee:null,body:{username:'supertada-test',password:'Reset-Client-1234'}});assert.equal(resetLogin.body.user.mustChange,true);
 assert.equal((await call('/api/customer-accounts',{body:{op:'update',id:a2.body.id,version:2,username:'other-company',active:false}})).status,200);assert.equal((await call('/api/customer-auth/status',{employee:null,cookie:cookie2})).body.user,null);assert.equal((await call('/api/customer-auth/login',{employee:null,body:{username:'other-company',password:'Other-Company-1234'}})).status,401);
 // Customer password boundaries apply consistently to creation, self-service changes and resets.
