@@ -55,3 +55,7 @@ export const improvementActions=sqliteTable('improvement_actions',{
 export const improvementReviews=sqliteTable('improvement_reviews',{id:text('id').primaryKey(),actionId:text('action_id').notNull().references(()=>improvementActions.id),day:text('day').notNull(),snapshot:text('snapshot').notNull(),createdAt:integer('created_at').notNull()});
 export const analysisReports=sqliteTable('analysis_reports',{month:text('month').primaryKey(),snapshot:text('snapshot').notNull(),createdAt:integer('created_at').notNull()});
 export const analysisMeta=sqliteTable('analysis_meta',{key:text('key').primaryKey(),value:text('value').notNull()});
+
+// Internal manual/Excel work items have durable identities independent of customer logins.
+export const staffWorkItems=sqliteTable('staff_work_items',{id:text('id').primaryKey(),payload:text('payload').notNull(),version:integer('version').notNull().default(1),createdBy:text('created_by').notNull(),createdAt:integer('created_at').notNull(),updatedAt:integer('updated_at').notNull(),updatedBy:text('updated_by').notNull()});
+export const workPayments=sqliteTable('work_payments',{id:text('id').primaryKey(),workId:text('work_id').notNull(),category:text('category').notNull(),amountCents:integer('amount_cents').notNull(),paidDate:text('paid_date').notNull(),reference:text('reference').notNull(),actor:text('actor').notNull(),createdAt:integer('created_at').notNull()},t=>[index('work_payment_work').on(t.workId)]);

@@ -71,6 +71,13 @@
       "when": 1793114196558,
       "tag": "0009_empty_mantis",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1793115851093,
+      "tag": "0010_overconfident_king_cobra",
+      "breakpoints": true
     }
   ]
 }

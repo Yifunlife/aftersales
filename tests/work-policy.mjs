@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import {applyWorkUpdate,projectWork} from '../lib/work-policy.mjs';
+const user=role=>({role,name:role,id:role});
+const base={id:'test',workNo:'TEST',customer:'客户',project:'项目',stage:'审核',history:[],attachments:[],feedback:''};
+function update(old,role,patch){return applyWorkUpdate(old,{...projectWork(old,role),...patch},user(role))}
+assert.throws(()=>update(base,'管理员',{stage:'已关闭',actual:'2026-10-25'}),/整单/);
+assert.throws(()=>update(base,'审核人员',{production:{amountCents:1}}),/不能修改字段/);
+assert.throws(()=>update(base,'采购人员',{reviewDraft:{ready:true}}),/岗位/);
+let p={...base,stage:'生产采购'};
+assert.throws(()=>update(p,'生产人员',{production:{status:'生产完成',amountCents:0,receivedAt:'2026-10-20',estimatedAt:'2026-10-21',completedAt:'2026-10-22'},stage:'发货物流'}),/依次/);
+p=update(p,'生产人员',{production:{status:'已接收',receivedAt:'2026-10-20'}});
+p=update(p,'生产人员',{production:{...p.production,status:'生产中',estimatedAt:'2026-10-22',amountCents:1200}});
+p=update(p,'生产人员',{production:{...p.production,status:'生产完成',completedAt:'2026-10-22'},stage:'发货物流'});assert.equal(p.stage,'发货物流');
+assert.throws(()=>update(p,'仓库人员',{stage:'现场处理',shipment:{tracking:'T',received:true},operationResult:{stage:'发货物流',result:'已签收'}}),/先保存发运/);
+p=update(p,'仓库人员',{shipment:{tracking:'T',received:false,amountCents:500}});
+p=update(p,'仓库人员',{stage:'现场处理',shipment:{...p.shipment,received:true},operationResult:{stage:'发货物流',result:'已签收'}});
+p=update(p,'安装人员',{stage:'客户验收',serviceCost:{amountCents:100},operationResult:{stage:'现场处理',result:'修复完成'}});
+assert.throws(()=>update(p,'售后专员',{stage:'负责人复核',operationResult:{stage:'客户验收',result:'验收通过'}}),/客户确认人/);
+p=update(p,'售后专员',{stage:'负责人复核',operationResult:{stage:'客户验收',result:'客户验收通过',customerContact:'客户A'}});
+assert.throws(()=>update(p,'售后专员',{stage:'已关闭',actual:'2026-10-25'}),/岗位/);
+p=update(p,'审核人员',{stage:'已关闭',actual:'2026-10-25',operationResult:{stage:'负责人复核',result:'核实关闭'}});assert.equal(p.stage,'已关闭');assert(p.history.every(x=>x.server));
+console.log('Server work policy passed: role/field guards, production sequence, prior shipment, customer acceptance and reviewer closure.');

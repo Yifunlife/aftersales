@@ -34,7 +34,13 @@ assert.equal((await call('work-items',{user:'reviewer',body:{items:[{...work[0],
 assert.equal((await call('work-items',{user:'reviewer',body:{items:[{...work[0],attachments:[{id:'unknown',url:'/api/customer/file/unknown'}]}]}})).status,400);
 const edited={...work[0],attachments:[...work[0].attachments,...internalUpload.data.files],stage:'工程下单',planned:'2026-10-25',review:{method:'内部方案'},production:{amountCents:88888}};
 assert.equal((await call('work-items',{user:'buyer',body:{items:[edited]}})).status,403);
-assert.equal((await call('work-items',{user:'reviewer',body:{items:[edited]}})).status,200);assert.equal((await call('work-items',{user:'reviewer',body:{items:[edited]}})).status,403);assert.equal((await call('work-items',{user:'admin',body:{items:[edited]}})).status,409,'Stale saves must not overwrite another employee');
+assert.equal((await call('work-items',{user:'reviewer',body:{items:[edited]}})).status,403,'Reviewers cannot inject production costs');
+for(let i=0;i<work.length;i++){const draft={...work[i],reviewDraft:{ready:true,method:'内部方案',reviewer:'reviewer',needOrder:'yes',department:'工程部',nextOwner:'工程',planned:'2026-10-25'}};const saved=await call('work-items',{user:'reviewer',body:{items:[draft]}});assert.equal(saved.status,200,JSON.stringify(saved.data));work[i]=saved.data.items[0]}
+const dispatch=work.map(x=>({...x,stage:'工程下单',planned:'2026-10-25',department:'工程部',owner:'工程',review:{approved:true,needOrder:true,method:'内部方案',department:'工程部'}}));
+assert.equal((await call('work-items/dispatch',{user:'reviewer',body:{items:dispatch.slice(0,1)}})).status,400,'All siblings are required');
+const staleDispatch=dispatch.map((x,i)=>i?x:{...x,cloudVersion:x.cloudVersion-1});assert.equal((await call('work-items/dispatch',{user:'reviewer',body:{items:staleDispatch}})).status,409);assert((await call('work-items',{user:'reviewer'})).data.items.every(x=>x.stage==='审核'),'A stale batch must leave all siblings unchanged');
+const transferred=await call('work-items/dispatch',{user:'reviewer',body:{items:dispatch}});assert.equal(transferred.status,200,JSON.stringify(transferred.data));
+assert.equal((await call('work-items',{user:'reviewer',body:{items:[work[0]]}})).status,409,'Stale saves must not overwrite another employee');
 portal=await call('portal?token='+token,{user:null});const publicJSON=JSON.stringify(portal.data);assert(!publicJSON.includes('内部检查备注'));assert(!publicJSON.includes('amountCents'));assert(!publicJSON.includes('内部方案'));assert.equal(portal.data.requests[0].work[0].planned,'2026-10-25');
 const file=sqlite.prepare("SELECT id FROM customer_files WHERE object_key LIKE 'customer/%'").get();assert.equal((await call('file/'+file.id,{user:null})).status,401);assert.equal((await call('file/'+file.id+'?token='+token,{user:null})).status,200);
 const link2=await call('invites',{body:{customerId:c2}});const token2=new URL(link2.data.url).searchParams.get('token');assert.equal((await call('file/'+file.id+'?token='+token2,{user:null})).status,403);assert.equal((await call('portal?token='+token2,{user:null})).data.requests.length,0);
@@ -44,13 +50,13 @@ await call('revoke-links',{body:{customerId:cid}});assert.equal((await call('por
 const staffUpload=new FormData();staffUpload.append('files',new File([new Uint8Array([137,80,78,71])],'staff.png',{type:'image/png'}));
 assert.equal((await call('staff-files',{user:null,body:staffUpload})).status,401);
 const stored=await call('staff-files',{user:'buyer',body:staffUpload});assert.equal(stored.status,200);const staffFile=stored.data.files[0];
-assert.equal((await call('file/'+staffFile.id,{user:'staff'})).status,200);
+assert.equal((await call('file/'+staffFile.id,{user:'staff'})).status,403,'Unlinked employee uploads are private to the uploader');
 assert.equal((await call('file/'+staffFile.id+'?token='+token2,{user:null})).status,403,'Customer links cannot access staff workflow photos');
 assert.equal((await call('file/'+staffFile.id,{user:null})).status,401);
 const metadata=sqlite.prepare('SELECT * FROM staff_files WHERE id=?').get(staffFile.id);assert.equal(metadata.size,4);assert.equal(objects.get(metadata.object_key).length,4);assert(!JSON.stringify(metadata).includes('data:'));
 assert.deepEqual(sqlite.prepare('PRAGMA foreign_key_check').all(),[]);console.log('Customer intake passed: durable submission and files, store/profile autofill, customer isolation, scoped links, revocation, deduplication, supplement, specialist gate, reviewer handoff, cloud workflow persistence, employee permissions and private-field filtering.');
 // Saving one review draft must persist it without dispatching the whole report.
-const vm=await import('node:vm');const source=fs.readFileSync('app-fragment.html','utf8');const reviewSource=source.slice(source.indexOf('function saveReviewItem(form)'),source.indexOf('function dispatchReviewBatch('));
+const vm=await import('node:vm');const source=fs.readFileSync('app-fragment.html','utf8');const reviewSource=source.slice(source.indexOf('function saveReviewItem(form)'),source.indexOf('async function dispatchReviewBatch('));
 let persisted=0;const draft={id:'draft-cloud',stage:'审核',grade:'B',history:[],cloudRequestId:'request'};const error={textContent:''};
 class FormDataMock extends Map{constructor(form){super(Object.entries(form.values))}}
 const ctx={error,data:[draft],FormData:FormDataMock,departments:['售后部'],today:'2026-10-19',validDate:v=>/^\d{4}-\d{2}-\d{2}$/.test(v),reviewEdits:new Map(),collapsedReviewItems:new Set(),render(){},notice(){},persist(){persisted++}};
@@ -59,9 +65,29 @@ console.log('Customer review draft passed: save persists immediately; full dispa
 
 // Closure generates exactly one private, reviewable solution draft atomically.
 let closedWork=(await call('work-items',{user:'admin'})).data.items.find(x=>x.id===edited.id);
-closedWork={...closedWork,stage:'已关闭',review:{method:'测试修复：客户A customer@example.test +8613812345678'},history:[{action:'现场处理：更换测试部件'}]};
+// Seed only the pre-closure state; the API must enforce the final operation.
+closedWork={...closedWork,stage:'负责人复核',review:{method:'测试修复：客户A customer@example.test +8613812345678'},history:[{action:'现场处理：更换测试部件'}]};
+sqlite.prepare('UPDATE customer_work_items SET payload=? WHERE id=?').run(JSON.stringify(closedWork),closedWork.id);
+closedWork={...closedWork,stage:'已关闭',actual:'2026-10-25',operationResult:{stage:'负责人复核',decision:'pass',result:'修复已核实'}};
 assert.equal((await call('work-items',{user:'admin',body:{items:[closedWork]}})).status,200);
 const learned=sqlite.prepare("SELECT * FROM knowledge_articles WHERE summary LIKE '由已关闭工单%'").all();assert.equal(learned.length,1);assert.equal(learned[0].status,'draft');assert(learned[0].body.includes('更换测试部件'));assert(!learned[0].body.includes('customer@example.test'));assert(!learned[0].body.includes('客户A'));assert(!learned[0].body.includes('13812345678'));
 assert.equal((await call('work-items',{user:'admin',body:{items:[closedWork]}})).status,409);assert.equal(sqlite.prepare('SELECT count(*) AS n FROM knowledge_articles').get().n,1);
-closedWork.cloudVersion++;assert.equal((await call('work-items',{user:'admin',body:{items:[closedWork]}})).status,200);assert.equal(sqlite.prepare('SELECT count(*) AS n FROM knowledge_articles').get().n,1);
+const again=(await call('work-items',{user:'admin'})).data.items.find(x=>x.id===closedWork.id);assert.equal((await call('work-items',{user:'admin',body:{items:[again]}})).status,200);assert.equal(sqlite.prepare('SELECT count(*) AS n FROM knowledge_articles').get().n,1);
 console.log('Solution learning passed: atomic closure, deduplication, stale saves, private draft and contact redaction.');
+
+// Staff-created work must survive a new request and preserve isolated cost access.
+const ownUpload=await call('staff-files',{body:staffUpload});const ownFile=ownUpload.data.files[0];
+const staffId='STAFF-'+crypto.randomUUID(),batchId='STAFF-CASE-'+crypto.randomUUID();
+const created=await call('staff-work-items',{body:{items:[{id:staffId,batchId,customer:'公司',project:'项目',product:'设备',issue:'故障',owner:'staff',submitted:false,attachments:[ownFile]}]}});assert.equal(created.status,201,JSON.stringify(created.data));
+assert.equal((await call('staff-work-items',{body:{items:[{id:staffId,batchId,customer:'公司',project:'项目',product:'设备',issue:'故障',owner:'staff'}]}})).data.items[0].id,staffId,'Retry must not duplicate a work item');
+let durable=(await call('work-items')).data.items.find(x=>x.id===staffId);assert(durable);assert.equal(durable.attachments[0].id,ownFile.id,'Initial uploaded attachments must persist');assert.equal((await call('work-items',{body:{items:[{...durable,stage:'已关闭',actual:'2026-10-25'}]}})).status,403);
+assert.equal((await call('work-items',{body:{items:[{...durable,stage:'审核',submitted:true}]}})).status,200);
+const costWork={...durable,stage:'采购',purchase:{status:'已采购',amountCents:10000,buyer:'buyer',tracking:'T1'},production:{amountCents:22222},review:{analysis:'内部技术记录'},attachments:[]};
+sqlite.prepare('UPDATE staff_work_items SET payload=? WHERE id=?').run(JSON.stringify(costWork),staffId);
+const buyerView=(await call('work-items',{user:'buyer'})).data.items.find(x=>x.id===staffId);assert.equal(buyerView.purchase.amountCents,10000);assert.equal(buyerView.production.amountCents,undefined);assert.equal(buyerView.review.analysis,undefined);
+assert.equal((await call('finance',{user:'buyer'})).status,403);const ledger=await call('finance',{user:'admin'});assert(ledger.data.entries.some(x=>x.workId===staffId&&x.amountCents===10000));
+const payment={id:crypto.randomUUID(),workId:staffId,category:'采购',amountCents:6000,version:buyerView.cloudVersion,paidDate:'2026-10-25',reference:'TEST-001'};
+assert.equal((await call('finance/payments',{user:'admin',body:payment})).status,200);assert.equal((await call('finance/payments',{user:'admin',body:payment})).data.duplicate,true);assert.equal((await call('finance/payments',{user:'admin',body:{...payment,id:crypto.randomUUID(),amountCents:5000}})).status,409);
+assert.equal((await call('work-items',{user:'buyer',body:{items:[{...buyerView,purchase:{...buyerView.purchase,amountCents:5000}}]}})).status,400);
+const safeSave=await call('work-items',{user:'buyer',body:{items:[{...buyerView,purchase:{...buyerView.purchase,tracking:'T2'}}]}});assert.equal(safeSave.status,200,JSON.stringify(safeSave.data));assert.equal(JSON.parse(sqlite.prepare('SELECT payload FROM staff_work_items WHERE id=?').get(staffId).payload).production.amountCents,22222,'A redacted client save must preserve hidden fields');
+console.log('Staff workflow security passed: persistence, idempotent create, stage guards, role projections, finance permissions, overpayment prevention and hidden-field preservation.');

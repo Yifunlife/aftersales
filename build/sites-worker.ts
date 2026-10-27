@@ -1,3 +1,5 @@
+import {proxyAliOrigin} from '../runtime/ali-frontdoor.mjs';
+import {handleResourceBridge} from '../runtime/resource-bridge.mjs';
 import {captureAnalysisReviews} from '../lib/problem-analysis.mjs';
 import handler from "vinext/server/fetch-handler";
 import { runWithConnectorBinding } from "../lib/connector-context";
@@ -6,6 +8,7 @@ import type { ConnectorBinding } from "../lib/connector-contract.mjs";
 export default {
   async scheduled(_event: ScheduledController, env: Cloudflare.Env, _ctx: ExecutionContext) { await captureAnalysisReviews(env.DB); },
   fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
+    if(new URL(request.url).pathname==='/__ali-resources')return handleResourceBridge(request,env);
     // Public Workers must never trust identity headers supplied by a client.
     if ((env as any).STANDALONE_CLOUDFLARE === "true") {
       const headers = new Headers(request.headers);
@@ -14,6 +17,7 @@ export default {
       }
       request = new Request(request, { headers });
     }
+    if((env as any).ALI_ORIGIN_URL&&(env as any).ALI_ORIGIN_SECRET)return proxyAliOrigin(request,env);
     let binding = ctx.props?.CONNECTORS;
     // Local preview emulates the same request-scoped capability. This branch and
     // the auxiliary service binding are absent from production builds.

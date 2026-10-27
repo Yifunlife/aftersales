@@ -9,7 +9,7 @@ The user requires the **售后专员填写** form and **Excel 标准导入模板
 - After edits, run `npm run intake:check`, `node check.mjs` and `npm run test:intake-sync`. Build checks block publication if the web schema, generated workspace, template labels, required markers or dropdowns differ. Keep `app-fragment.html` and the full HTML export `lib/workspace.mjs` synchronized.
 - Preserve the user's compact layout, unfrozen sheets, wide photo areas and existing values in the example sheet. Render affected spreadsheet areas after changes.
 - Publish the updated site and its downloadable template together using the Sites skill. If updating the local delivered workbook too, copy the verified published template to the existing root workbook path.
-- This synchronizes definitions and future downloadable templates. Downloaded/offline Excel files do not update automatically; imports do not create a live connection back to those files. Legacy sample business records remain session-local demonstrations. Customer profiles, stores, invites, requests, files and customer-origin work items are now persisted in D1/R2; keep those paths durable and separate from samples.
+- This synchronizes definitions and future downloadable templates. Downloaded/offline Excel files do not update automatically; imports do not create a live connection back to those files. Legacy sample business records remain session-local demonstrations. Customer profiles, stores, invites, requests, files, customer-origin work items, staff-created work items and payment registrations are now persisted in D1/R2; keep those paths durable and separate from samples.
 
 # Customer intake workflow
 

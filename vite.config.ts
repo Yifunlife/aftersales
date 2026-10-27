@@ -1,4 +1,5 @@
 import vinext from "vinext";
+import {fileURLToPath} from "node:url";
 import { defineConfig } from "vite";
 import hostingConfig from "./.openai/hosting.json";
 import { readExecutionProfile } from "./scripts/execution-profile.mjs";
@@ -8,7 +9,8 @@ import { connectorPreview } from "./build/connector-preview-plugin.mjs";
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
 
-const standalone = process.env.DEPLOY_TARGET === "cloudflare";
+const nodeTarget = process.env.DEPLOY_TARGET === "node";
+const standalone = process.env.DEPLOY_TARGET === "cloudflare" || nodeTarget;
 const { d1, r2 } = hostingConfig;
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
@@ -53,6 +55,7 @@ export default defineConfig(async ({ command }) => {
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
   return {
+    ...(nodeTarget ? {resolve: {alias: {"cloudflare:workers": fileURLToPath(new URL("./runtime/node-bindings.mjs", import.meta.url))}}} : {}),
     server: {
       ...(managedLinux
         ? { host: "0.0.0.0", allowedHosts: ["terminal.local"] }
@@ -64,7 +67,7 @@ export default defineConfig(async ({ command }) => {
     plugins: [
       vinext(),
       ...(!standalone ? [sites({ mockAuth: !managedLinux })] : []),
-      connectorPreview(),
+      ...(!nodeTarget ? [connectorPreview(),
       cloudflare({
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
         inspectorPort: false,
@@ -96,7 +99,7 @@ export default defineConfig(async ({ command }) => {
               ],
             }
           : {}),
-      }),
+      })] : []),
     ],
   };
 });

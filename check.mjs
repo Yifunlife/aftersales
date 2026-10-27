@@ -21,3 +21,6 @@ import './tests/customer-self-service.mjs';
 import "./tests/knowledge-intake.mjs";
 
 import "./tests/problem-analysis.mjs";
+
+import './tests/work-policy.mjs';
+import './tests/runtime-bridge.mjs';
