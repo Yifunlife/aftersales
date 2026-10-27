@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 export const employees = sqliteTable('employees', {
  id:text('id').primaryKey(), employeeId:text('employee_id'),email:text('email'),name:text('name').notNull(),role:text('role').notNull(),active:integer('active').notNull().default(1),mustChange:integer('must_change').notNull().default(1),hash:text('hash').notNull(),salt:text('salt').notNull(),version:integer('version').notNull().default(1),createdAt:integer('created_at').notNull(),updatedAt:integer('updated_at').notNull()
 }, t=>[uniqueIndex('employee_id_unique').on(t.employeeId),uniqueIndex('employee_email_unique').on(t.email)]);
@@ -45,3 +45,13 @@ export const knowledgeFiles=sqliteTable('knowledge_files',{id:text('id').primary
 export const knowledgeIntakes=sqliteTable('knowledge_intakes',{
  id:text('id').primaryKey(),label:text('label').notNull(),noteKey:text('note_key').notNull(),files:text('files').notNull(),status:text('status').notNull().default('pending'),error:text('error').notNull().default(''),resultKey:text('result_key').notNull().default(''),version:integer('version').notNull().default(1),createdBy:text('created_by').notNull(),createdAt:integer('created_at').notNull(),updatedAt:integer('updated_at').notNull()
 });
+
+export const assistantEvents=sqliteTable('assistant_events',{
+ id:text('id').primaryKey(),actorHash:text('actor_hash').notNull(),audience:text('audience').notNull(),channel:text('channel').notNull(),topic:text('topic').notNull(),question:text('question').notNull(),mode:text('mode').notNull(),sources:text('sources').notNull().default('[]'),feedback:text('feedback').notNull().default('unknown'),version:integer('version').notNull().default(1),createdAt:integer('created_at').notNull(),updatedAt:integer('updated_at').notNull()
+},t=>[index('assistant_event_time').on(t.createdAt)]);
+export const improvementActions=sqliteTable('improvement_actions',{
+ id:text('id').primaryKey(),title:text('title').notNull(),topic:text('topic').notNull(),keyword:text('keyword').notNull(),description:text('description').notNull(),scope:text('scope').notNull(),owner:text('owner').notNull(),implementedAt:integer('implemented_at').notNull(),windowDays:integer('window_days').notNull(),beforeDevices:integer('before_devices').notNull().default(0),afterDevices:integer('after_devices').notNull().default(0),conclusion:text('conclusion').notNull().default('observing'),confirmedAt:integer('confirmed_at').notNull().default(0),notes:text('notes').notNull().default(''),version:integer('version').notNull().default(1),createdBy:text('created_by').notNull(),createdAt:integer('created_at').notNull(),updatedAt:integer('updated_at').notNull()
+});
+export const improvementReviews=sqliteTable('improvement_reviews',{id:text('id').primaryKey(),actionId:text('action_id').notNull().references(()=>improvementActions.id),day:text('day').notNull(),snapshot:text('snapshot').notNull(),createdAt:integer('created_at').notNull()});
+export const analysisReports=sqliteTable('analysis_reports',{month:text('month').primaryKey(),snapshot:text('snapshot').notNull(),createdAt:integer('created_at').notNull()});
+export const analysisMeta=sqliteTable('analysis_meta',{key:text('key').primaryKey(),value:text('value').notNull()});

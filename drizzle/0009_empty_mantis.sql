@@ -1,0 +1,1 @@
+ALTER TABLE `improvement_actions` ADD `confirmed_at` integer DEFAULT 0 NOT NULL;

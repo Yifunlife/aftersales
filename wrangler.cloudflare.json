@@ -30,5 +30,10 @@
   "account_id": "5a472d15dc37681abce4ab6e4eb152c3",
   "ai": {
     "binding": "AI"
+  },
+  "triggers": {
+    "crons": [
+      "0 0 * * *"
+    ]
   }
 }

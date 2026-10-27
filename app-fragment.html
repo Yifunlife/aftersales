@@ -647,7 +647,7 @@ const root=document.getElementById('yw-after-sales');
 const $=s=>root.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const today=new Date(Date.now()+28800000).toISOString().slice(0,10);
-const navs=['售后驾驶舱','售后工单中心','客户工单中心','售后审核中心','工程下单中心','采购中心','生产中心','仓库与物流中心','安装中心','财务中心','产品资料中心'];
+const navs=['售后驾驶舱','售后工单中心','客户工单中心','售后审核中心','工程下单中心','采购中心','生产中心','仓库与物流中心','安装中心','财务中心','产品资料中心','问题分析与改善'];
 const stages=JSON.parse(document.getElementById('yifun-intake-schema').textContent).workflow.stages;
 const methods=JSON.parse(document.getElementById('yifun-intake-schema').textContent).fields.find(f=>f.key==='method').options;
 const costs=JSON.parse(document.getElementById('yifun-intake-schema').textContent).fields.find(f=>f.key==='cost').options;
@@ -671,7 +671,7 @@ const reviewEdits=new Map();
 const collapsedReviewItems=new Set();
 const initializedReviewBatches=new Set();
 const persist=()=>{window.openai?.setWidgetState?.({modelContent:{页面:state.nav,筛选:state.filter,选中工单:state.selected},privateContent:state})?.catch(()=>{});queueCustomerCloudSave();};
-const icons=['layout-dashboard','clipboard-list','inbox','clipboard-check','drafting-compass','shopping-cart','factory','warehouse','wrench','wallet','book-open'];
+const icons=['layout-dashboard','clipboard-list','inbox','clipboard-check','drafting-compass','shopping-cart','factory','warehouse','wrench','wallet','book-open','chart-no-axes-combined'];
 $('nav').innerHTML=navs.map((n,i)=>`<button type="button" class="cursor-interaction" data-nav="${n}"><i data-lucide="${icons[i]}" aria-hidden="true"></i>${n}</button>`).join('');
 function iconsRefresh(){if(globalThis.lucide)lucide.createIcons({attrs:{width:15,height:15}})}
 iconsRefresh();
@@ -756,7 +756,7 @@ $('#yw-client-summary').textContent=(state.customer==='全部客户'?cs.length+'
 }
 function render(){
 if(window.__yifunAccess&&!window.__yifunAccess.canViewPage(state.nav))return;
-restoreCustomerPanel();restoreProductPanel();if(state.nav==='产品资料中心'){renderProductPanel();return;}if(state.nav==='客户工单中心'){renderCustomerPanel();return;}
+restoreCustomerPanel();restoreProductPanel();if(['产品资料中心','问题分析与改善'].includes(state.nav)){renderProductPanel();return;}if(state.nav==='客户工单中心'){renderCustomerPanel();return;}
 if(renderImportedDepartment())return;
 const center=state.nav==='售后工单中心';
 const operational=Object.hasOwn(operationStages,state.nav);
@@ -1094,8 +1094,10 @@ function renderCustomerPanel(){
 const productHidden=new Map();let productHost=null;
 function restoreProductPanel(){for(const [el,hidden] of productHidden)el.hidden=hidden;productHidden.clear();if(productHost)productHost.hidden=true;}
 function renderProductPanel(){
+ const analysis=state.nav==='问题分析与改善',editable=['管理员','售后专员'].includes(window.__EMPLOYEE__?.role),src=analysis?'/problem-analysis?embedded=1':editable?'/knowledge-admin?embedded=1':'/help';
  const main=root.querySelector(':scope>.shell>main');if(!productHost){productHost=document.createElement('section');productHost.id='yw-product-center';const editable=['管理员','售后专员'].includes(window.__EMPLOYEE__?.role);productHost.innerHTML='<iframe title="产品资料中心" src="'+(editable?'/knowledge-admin?embedded=1':'/help')+'" loading="eager"></iframe>';main.append(productHost)}
- for(const el of main.children){if(el===productHost||el.classList.contains('heading'))continue;productHidden.set(el,el.hidden);el.hidden=true}productHost.hidden=false;$('#yw-title').textContent='产品资料中心';$('#yw-subtitle').textContent='玩法说明 · 维修说明 · 常见问题 · 资料更新与发布';const date=root.querySelector('.heading>small');if(date)date.textContent=today+' · 中国标准时间';root.querySelectorAll('[data-nav]').forEach(b=>{b.classList.toggle('active',b.dataset.nav===state.nav);b.setAttribute('aria-pressed',String(b.dataset.nav===state.nav))});
+ const iframe=productHost.querySelector('iframe');if(iframe.getAttribute('src')!==src)iframe.src=src;iframe.title=state.nav;
+ for(const el of main.children){if(el===productHost||el.classList.contains('heading'))continue;productHidden.set(el,el.hidden);el.hidden=true}productHost.hidden=false;$('#yw-title').textContent=state.nav;$('#yw-subtitle').textContent=analysis?'高频问题 · 自助反馈 · 改善观察 · 月度对比':'玩法说明 · 维修说明 · 常见问题 · 资料更新与发布';const date=root.querySelector('.heading>small');if(date)date.textContent=today+' · 中国标准时间';root.querySelectorAll('[data-nav]').forEach(b=>{b.classList.toggle('active',b.dataset.nav===state.nav);b.setAttribute('aria-pressed',String(b.dataset.nav===state.nav))});
 }
 const cloudBaselines=new Map();let cloudSaving=false,cloudTimer=null,cloudLoaded=false;
 async function loadCustomerWork(){try{const r=await fetch('/api/customer/work-items',{cache:'no-store'});if(!r.ok)return;const j=await r.json();if(!Array.isArray(j.items))return;for(const item of j.items){const found=data.find(d=>d.id===item.id);if(found&&cloudBaselines.has(item.id)&&JSON.stringify(found)!==cloudBaselines.get(item.id))continue;if(found)Object.assign(found,item);else data.unshift(item);cloudBaselines.set(item.id,JSON.stringify(item));}cloudLoaded=true;render();}catch{notice('客户正式工单暂未加载成功，请刷新重试。');}}
@@ -1624,9 +1626,10 @@ if(window.lucide)window.lucide.createIcons({attrs:{width:17,height:17}});
 <script id="yifun-personnel-access">(()=>{
 const root=document.getElementById('yw-after-sales');
 root.dataset.authenticated='true';
-const pages=['售后驾驶舱','售后工单中心','售后审核中心','工程下单中心','采购中心','生产中心','仓库与物流中心','安装中心','财务中心','客户工单中心','产品资料中心'];
+const pages=['售后驾驶舱','售后工单中心','售后审核中心','工程下单中心','采购中心','生产中心','仓库与物流中心','安装中心','财务中心','客户工单中心','产品资料中心','问题分析与改善'];
 const roles={管理员:{view:pages,write:pages,note:'管理人员权限、查看与操作全部模块'},负责人:{view:pages,write:[],note:'查看全流程和费用，业务操作由各部门完成'},售后专员:{view:[pages[1],pages[9]],write:[pages[1],pages[9]],note:'登记售后、提交审核、跟踪订单完整进度'},审核人员:{view:[pages[1],pages[2],pages[9]],write:[pages[2]],note:'审核问题、保存方案并分派部门'},工程人员:{view:[pages[1],pages[3]],write:[pages[3]],note:'填写工程单、下单组和执行部门'},采购人员:{view:[pages[1],pages[4]],write:[pages[4]],note:'填写采购结果、单号和采购费用'},生产人员:{view:[pages[1],pages[5]],write:[pages[5]],note:'接收生产、排期、登记费用和完工交接'},仓库人员:{view:[pages[6]],write:[pages[6]],note:'仓库到货、齐货及发货跟进'},安装人员:{view:[pages[7]],write:[pages[7]],note:'安装排期、服务记录及交付'},财务人员:{view:[pages[8]],write:[pages[8]],note:'查看部门费用、核对及登记付款'}};
 for(const r of Object.values(roles))if(!r.view.includes('产品资料中心'))r.view.push('产品资料中心');if(!roles.售后专员.write.includes('产品资料中心'))roles.售后专员.write.push('产品资料中心');
+for(const name of ['售后专员','审核人员'])if(!roles[name].view.includes('问题分析与改善'))roles[name].view.push('问题分析与改善');roles.售后专员.write.push('问题分析与改善');
 const person=()=>window.__EMPLOYEE__,role=()=>roles[person().role];
 function currentPage(){return window.__yifunWorkflow?.page()||root.querySelector('#yw-title')?.textContent;}
 function canWrite(page=currentPage()){return !!person()?.active&&role().write.includes(page);}
@@ -1642,7 +1645,7 @@ root.addEventListener('click',e=>{if(e.target.closest('[data-customer-share]')){
 root.addEventListener('submit',e=>{if(!canWrite()){e.preventDefault();e.stopImmediatePropagation();}},true);
 function paint(){root.dataset.accessReadonly=String(!canWrite());root.querySelectorAll(':scope>.shell>nav [data-nav]').forEach(b=>{const hidden=!role().view.includes(b.dataset.nav);if(b.hidden!==hidden)b.hidden=hidden;});if(!canWrite(pages[1]))root.querySelectorAll('#yw-entry').forEach(e=>e.hidden=true);}
 let scheduled=false;new MutationObserver(()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;paint();});}).observe(root.querySelector('.shell'),{childList:true,subtree:true});
-const view=new URLSearchParams(location.search).get('view'),landing=person().role==='售后专员'?'客户工单中心':person().role==='审核人员'?'售后审核中心':role().view[0];window.__yifunWorkflow?.navigate(view==='review'&&role().view.includes('售后审核中心')?'售后审核中心':view==='customer-inbox'&&role().view.includes('客户工单中心')?'客户工单中心':view==='product-library'?'产品资料中心':landing);paint();
+const view=new URLSearchParams(location.search).get('view'),landing=person().role==='售后专员'?'客户工单中心':person().role==='审核人员'?'售后审核中心':role().view[0];window.__yifunWorkflow?.navigate(view==='review'&&role().view.includes('售后审核中心')?'售后审核中心':view==='customer-inbox'&&role().view.includes('客户工单中心')?'客户工单中心':view==='product-library'?'产品资料中心':view==='problem-analysis'&&role().view.includes('问题分析与改善')?'问题分析与改善':landing);paint();
 setInterval(async()=>{try{const j=await(await fetch('/api/auth/status',{cache:'no-store'})).json();if(!j.user||j.user.mustChange||j.user.role!==person().role)location.href='/';}catch{}},60000);
 })();</script>
 <style id="personnel-access-style">

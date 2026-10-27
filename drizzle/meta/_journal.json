@@ -57,6 +57,20 @@
       "when": 1793112104499,
       "tag": "0007_chief_lilandra",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793113278422,
+      "tag": "0008_gifted_morbius",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1793114196558,
+      "tag": "0009_empty_mantis",
+      "breakpoints": true
     }
   ]
 }

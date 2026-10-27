@@ -1,3 +1,4 @@
+import {handleProblemAnalysis} from '../lib/problem-analysis.mjs';
 import {handleAssistant} from '../lib/assistant.mjs';
 import {handleUnifiedLogin} from '../lib/unified-auth.mjs';
 import {passwordHash} from '../lib/accounts.mjs';
@@ -61,7 +62,9 @@ let modelCalls=0,conversions=0,lastPrompt='';const ai={async run(model,input){mo
 async function assist(question,{cookie=cookie1,token:tk='',origin='https://test.local',model=ai,product='YF-001'}={}){const r=await handleAssistant(new Request('https://test.local/api/assistant'+(tk?'?token='+tk:''),{method:'POST',headers:{cookie,origin,'Content-Type':'application/json'},body:JSON.stringify({question,product})}),{db,bucket,ai:model});return {status:r.status,body:await r.json()}}
 assert.equal((await assist('测试',{cookie:''})).status,401);
 assert.equal((await assist('测试',{origin:'https://evil.test'})).status,403);
-let reply=await assist('如何使用？');assert.equal(reply.status,200);assert.equal(reply.body.mode,'ai');assert.equal(reply.body.sources.length,2);assert.equal(conversions,1);assert(lastPrompt.includes('PDF 内容'));
+let reply=await assist('如何使用？');assert.equal(reply.status,200);assert.equal(reply.body.mode,'ai');assert.equal(reply.body.sources.length,2);assert(reply.body.event?.id);
+async function customerFeedback(cookie,id){return handleProblemAnalysis(new Request('https://test.local/api/problem-analysis/feedback',{method:'POST',headers:{cookie,origin:'https://test.local','Content-Type':'application/json'},body:JSON.stringify({id,version:1,feedback:'resolved'})}),{db})}
+assert.equal((await customerFeedback(cookie2,reply.body.event.id)).status,404);assert.equal((await customerFeedback(cookie1,reply.body.event.id)).status,200);assert.equal(conversions,1);assert(lastPrompt.includes('PDF 内容'));
 assert.equal((await assist('再次查询',{product:'YF001'})).body.mode,'ai','Model matching tolerates hyphens');assert.equal(conversions,1,'Immutable PDF extraction is cached in private R2');
 assert.equal((await assist('其他',{product:'ABSENT-999'})).body.mode,'no-match');
 reply=await assist('查看我的售后进度',{product:''});assert.equal(reply.body.mode,'progress');assert(reply.body.progress.some(r=>r.id===submitted.body.id));assert(!JSON.stringify(reply.body).includes('contact@example.test'));

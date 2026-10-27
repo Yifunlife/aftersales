@@ -1,8 +1,10 @@
+import {captureAnalysisReviews} from '../lib/problem-analysis.mjs';
 import handler from "vinext/server/fetch-handler";
 import { runWithConnectorBinding } from "../lib/connector-context";
 import type { ConnectorBinding } from "../lib/connector-contract.mjs";
 
 export default {
+  async scheduled(_event: ScheduledController, env: Cloudflare.Env, _ctx: ExecutionContext) { await captureAnalysisReviews(env.DB); },
   fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
     // Public Workers must never trust identity headers supplied by a client.
     if ((env as any).STANDALONE_CLOUDFLARE === "true") {
