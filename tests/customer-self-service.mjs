@@ -117,3 +117,9 @@ assert.equal((await call('/api/customer-auth/login',{employee:null,body:{usernam
 assert.equal((await make(c1,'renamed-client')).status,201,'Deleted username may be reused without reassigning old records');
 assert.deepEqual(sqlite.prepare('PRAGMA foreign_key_check').all(),[]);
 console.log('Customer account rename/delete passed: uniqueness, version conflicts, role/CSRF guards, unchanged password, session revocation and preserved business records.');
+const typeDoc=await call('/api/knowledge',{body:{...doc,productCode:'',productName:'',topicType:'软件',title:'软件闪退处理',body:'软件闪退：请记录报错，联系专员。',status:'published'}});assert.equal(typeDoc.status,201);
+assert.equal((await call('/api/knowledge/'+typeDoc.body.id)).body.article.topicType,'软件');
+reply=await assist('软件闪退怎么办',{cookie:cookies.admin,product:'软件'});assert.equal(reply.body.mode,'ai');assert(lastPrompt.includes('软件闪退'));
+console.log('Type-only knowledge passed: publication, retrieval and assistant without a product model.');
+
+reply=await assist('软件如果出现问题应该怎么办',{cookie:cookies.admin,product:'软件'});assert.equal(reply.body.mode,'clarify');assert(reply.body.suggestions.includes('软件闪退'));

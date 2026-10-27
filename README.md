@@ -55,3 +55,15 @@ GitHub 主仓库：https://github.com/Yifunlife/aftersales ，发布分支 `main
 - 云端 `customer_work_items` 工单保存为“已关闭”时，和工单更新在同一事务中自动生成一篇“待审核解决方案”草稿。按工单生成固定ID防重复，过期版本不能生成草稿；不会覆盖专员后续修改或已发布版本。只整理产品、故障、原因、处理方法和相关处理记录，并过滤已知客户/联系信息，需人工检查适用条件、隐私与安全后发布。历史演示/本地样例不参与此流程。
 
 官方接口参考：[Workers AI 模型](https://developers.cloudflare.com/workers-ai/models/llama-3.3-70b-instruct-fp8-fast/)、[PDF文字转换](https://developers.cloudflare.com/workers-ai/features/markdown-conversion/usage/binding/)。
+
+## 原始资料收集与按类型归档（/knowledge-intake）
+
+产品资料中心新增“原始资料收集 / 拍照整理”。管理员和售后专员可以上传混合 Excel（XLSX/XLS）、CSV、Word DOCX、PDF、TXT、JPG/PNG/WebP，也可手机拍照加文字；每批5文件、单个10MB、合计20MB，文字说明1万字。旧DOC/HEIC需转换，CSV/TXT须UTF-8。只按类型归档时填写“软件、安装、结构、配件”等，不要求款号；`knowledge_articles.topic_type` 与产品款号独立，客户端搜索和智能助手均支持类型。
+
+原始文件、说明和可恢复的提取进度全部位于私有R2 `raw-knowledge/<batch-id>/`，D1的 `knowledge_intakes` 只保存元数据、版本与状态。来源下载接口只允许管理员/售后专员，客户及其他岗位不可查看。上传后浏览器自动依次请求 `/api/knowledge-intake/:id/process`，每次提取一文件或整理一段文字；页面关闭后完成当前步骤并停止，重新进入点击继续即可。过期3分钟的处理中租约可重试。每个操作使用版本锁防重复并发；所有候选条目在整批成功时才在同一事务中写成草稿，不会自动发布或覆盖现有文章。
+
+文字/表格通过AI提取后按产品或通用类型、独立故障拆分；重复的相同产品/问题原文合并，后续来源可补充实际解决方法。同一问题的多种方法保留为待核实，不能自动断定适用条件。一次识别内容最多7.2万字，分为3000字片段，每段最多20案例、整批100案例。超限会明确要求拆分，原文件保留；失败可重试，不静默丢弃后续内容。原文问题/原因/解决方法必须能逐字对应输入，未提供的解决方法保持待补充；款号/类型也须在原文出现。模型输出仅作为草稿，人工仍需校对误识别、个人信息、安全条件和图片归属。表格内嵌图片不保证完整提取，重要照片建议单独上传；不能只凭图片描述推断已验证原因或处理方法。需要公开的照片在审核后另行上传为产品文章附件。
+
+原始资料整理使用正常文本模型加服务端JSON/原文验证；未使用Cloudflare的JSON模式路由（实测该路由存在不可靠输出）。测试中验证了断点恢复、角色/CSRF、重复点击、无款号类型、后续证据补全、错误原文拒绝和整批仅生成草稿。云端独立合成样本验证了XLSX和图片读取，以及模型逐字摘录。没有写入生产演示案例。
+
+格式依据：[Cloudflare文档转换支持格式](https://developers.cloudflare.com/workers-ai/features/markdown-conversion/supported-formats/)。

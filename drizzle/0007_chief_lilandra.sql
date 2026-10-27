@@ -1,0 +1,1 @@
+ALTER TABLE `knowledge_articles` ADD `topic_type` text DEFAULT '' NOT NULL;

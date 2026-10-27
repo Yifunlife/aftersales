@@ -37,6 +37,11 @@ export const customerAccounts=sqliteTable('customer_accounts',{
 },t=>[uniqueIndex('customer_username_unique').on(t.username)]);
 export const customerSessions=sqliteTable('customer_sessions',{token:text('token').primaryKey(),accountId:text('account_id').notNull().references(()=>customerAccounts.id,{onDelete:'cascade'}),version:integer('version').notNull(),expires:integer('expires').notNull()});
 export const knowledgeArticles=sqliteTable('knowledge_articles',{
- id:text('id').primaryKey(),productCode:text('product_code').notNull(),productName:text('product_name').notNull(),title:text('title').notNull(),category:text('category').notNull(),summary:text('summary').notNull(),body:text('body').notNull(),links:text('links').notNull().default('[]'),status:text('status').notNull().default('draft'),language:text('language').notNull().default('zh'),version:integer('version').notNull().default(1),updatedBy:text('updated_by').notNull(),createdAt:integer('created_at').notNull(),updatedAt:integer('updated_at').notNull()
+ id:text('id').primaryKey(),productCode:text('product_code').notNull(),productName:text('product_name').notNull(),topicType:text('topic_type').notNull().default(''),title:text('title').notNull(),category:text('category').notNull(),summary:text('summary').notNull(),body:text('body').notNull(),links:text('links').notNull().default('[]'),status:text('status').notNull().default('draft'),language:text('language').notNull().default('zh'),version:integer('version').notNull().default(1),updatedBy:text('updated_by').notNull(),createdAt:integer('created_at').notNull(),updatedAt:integer('updated_at').notNull()
 });
 export const knowledgeFiles=sqliteTable('knowledge_files',{id:text('id').primaryKey(),articleId:text('article_id').notNull().references(()=>knowledgeArticles.id),objectKey:text('object_key').notNull(),name:text('name').notNull(),mime:text('mime').notNull(),size:integer('size').notNull()});
+
+// Raw source files and AI extraction outputs stay private in R2; D1 tracks the workflow.
+export const knowledgeIntakes=sqliteTable('knowledge_intakes',{
+ id:text('id').primaryKey(),label:text('label').notNull(),noteKey:text('note_key').notNull(),files:text('files').notNull(),status:text('status').notNull().default('pending'),error:text('error').notNull().default(''),resultKey:text('result_key').notNull().default(''),version:integer('version').notNull().default(1),createdBy:text('created_by').notNull(),createdAt:integer('created_at').notNull(),updatedAt:integer('updated_at').notNull()
+});

@@ -17,3 +17,5 @@ import './tests/customer-intake.mjs';
 import './tests/reporting.mjs';
 
 import './tests/customer-self-service.mjs';
+
+import "./tests/knowledge-intake.mjs";
