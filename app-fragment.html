@@ -647,7 +647,7 @@ const root=document.getElementById('yw-after-sales');
 const $=s=>root.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const today=new Date(Date.now()+28800000).toISOString().slice(0,10);
-const navs=['售后驾驶舱','售后工单中心','客户工单中心','售后审核中心','工程下单中心','采购中心','生产中心','仓库与物流中心','安装中心','财务中心','产品资料中心','问题分析与改善'];
+const navs=['售后驾驶舱','售后工单中心','客户工单中心','售后审核中心','工程下单中心','采购中心','生产中心','仓库与物流中心','安装中心','财务中心','问题分析与改善','产品资料中心'];
 const stages=JSON.parse(document.getElementById('yifun-intake-schema').textContent).workflow.stages;
 const methods=JSON.parse(document.getElementById('yifun-intake-schema').textContent).fields.find(f=>f.key==='method').options;
 const costs=JSON.parse(document.getElementById('yifun-intake-schema').textContent).fields.find(f=>f.key==='cost').options;
@@ -671,7 +671,7 @@ const reviewEdits=new Map();
 const collapsedReviewItems=new Set();
 const initializedReviewBatches=new Set();
 const persist=()=>{window.openai?.setWidgetState?.({modelContent:{页面:state.nav,筛选:state.filter,选中工单:state.selected},privateContent:state})?.catch(()=>{});queueCustomerCloudSave();};
-const icons=['layout-dashboard','clipboard-list','inbox','clipboard-check','drafting-compass','shopping-cart','factory','warehouse','wrench','wallet','book-open','chart-no-axes-combined'];
+const icons=['layout-dashboard','clipboard-list','inbox','clipboard-check','drafting-compass','shopping-cart','factory','warehouse','wrench','wallet','chart-no-axes-combined','book-open'];
 $('nav').innerHTML=navs.map((n,i)=>`<button type="button" class="cursor-interaction" data-nav="${n}"><i data-lucide="${icons[i]}" aria-hidden="true"></i>${n}</button>`).join('');
 function iconsRefresh(){if(globalThis.lucide)lucide.createIcons({attrs:{width:15,height:15}})}
 iconsRefresh();
