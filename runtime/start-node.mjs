@@ -18,3 +18,8 @@ createServer((req,res)=>{
  const proxy=httpRequest({hostname:'127.0.0.1',port:innerPort,path:req.url,method:req.method,headers},upstream=>{res.writeHead(upstream.statusCode,upstream.headers);upstream.pipe(res)});
  proxy.on('error',()=>{if(!res.headersSent)res.writeHead(502);res.end('Service unavailable')});req.on('aborted',()=>proxy.destroy());req.pipe(proxy);
 }).listen(port,'127.0.0.1');
+
+// Dispatch through the local app so outgoing WeCom calls use the ECS trusted IP.
+let notificationRun=false;
+const notificationTimer=setInterval(async()=>{if(notificationRun||!config.wecom?.secret)return;notificationRun=true;try{await fetch(`http://127.0.0.1:${innerPort}/api/notifications/run`,{method:'POST',headers:{'x-yifun-job-key':config.originSecret},signal:AbortSignal.timeout(90000)})}catch{}finally{notificationRun=false}},60000);
+notificationTimer.unref();

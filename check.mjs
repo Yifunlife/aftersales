@@ -31,3 +31,5 @@ await import("./tests/import-dates.mjs");
 await import("./tests/import-file-limit.mjs");
 
 await import("./tests/import-excel-media.mjs");
+
+import './tests/work-notifications.mjs';
