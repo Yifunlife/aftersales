@@ -91,3 +91,16 @@ assert.equal((await call('finance/payments',{user:'admin',body:payment})).status
 assert.equal((await call('work-items',{user:'buyer',body:{items:[{...buyerView,purchase:{...buyerView.purchase,amountCents:5000}}]}})).status,400);
 const safeSave=await call('work-items',{user:'buyer',body:{items:[{...buyerView,purchase:{...buyerView.purchase,tracking:'T2'}}]}});assert.equal(safeSave.status,200,JSON.stringify(safeSave.data));assert.equal(JSON.parse(sqlite.prepare('SELECT payload FROM staff_work_items WHERE id=?').get(staffId).payload).production.amountCents,22222,'A redacted client save must preserve hidden fields');
 console.log('Staff workflow security passed: persistence, idempotent create, stage guards, role projections, finance permissions, overpayment prevention and hidden-field preservation.');
+const acceptanceRow=sqlite.prepare('SELECT w.*,r.customer_id FROM customer_work_items w JOIN customer_requests r ON r.id=w.request_id LIMIT 1').get();
+const acceptancePayload={...JSON.parse(acceptanceRow.payload),stage:'客户验收',acceptanceHistory:[],operations:{}};
+sqlite.prepare('UPDATE customer_work_items SET payload=? WHERE id=?').run(JSON.stringify(acceptancePayload),acceptanceRow.id);
+const waitingAcceptance=(await call('work-items')).data.items.find(x=>x.id===acceptanceRow.id);
+const proxyAcceptance={...waitingAcceptance,stage:'负责人复核',operationResult:{stage:'客户验收',result:'已完成现场维修',confirmationMode:'internal',confirmationBasis:'内部核实依据-不应公开',customerContact:'伪客户名'}};
+const accepted=await call('work-items',{body:{items:[proxyAcceptance]}});assert.equal(accepted.status,200,JSON.stringify(accepted.data));
+const persistedAcceptance=JSON.parse(sqlite.prepare('SELECT payload FROM customer_work_items WHERE id=?').get(acceptanceRow.id).payload);
+assert.equal(persistedAcceptance.operations['客户验收'].confirmationMode,'internal');assert.equal(persistedAcceptance.operations['客户验收'].actorId,'staff');assert.equal(persistedAcceptance.operations['客户验收'].customerContact,'');assert.equal(persistedAcceptance.acceptanceHistory.length,1);
+assert.equal((await call('work-items',{body:{items:[proxyAcceptance]}})).status,409);
+const acceptanceInvite=(await call('invites',{body:{customerId:acceptanceRow.customer_id,language:'zh'}})).data.url;
+const acceptancePortal=await call('portal?token='+new URL(acceptanceInvite).searchParams.get('token'),{user:null});assert.equal(acceptancePortal.status,200);
+const customerProgress=acceptancePortal.data.requests.flatMap(r=>r.work).find(w=>w.id===acceptanceRow.id);assert.equal(customerProgress.confirmationMode,'internal');assert(!JSON.stringify(acceptancePortal.data).includes('内部核实依据-不应公开'));assert(!JSON.stringify(acceptancePortal.data).includes('伪客户名'));
+console.log('Internal completion confirmation persists server identity and immutable audit; stale saves reject and customer progress hides private evidence.');

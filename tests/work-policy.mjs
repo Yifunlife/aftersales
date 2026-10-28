@@ -17,6 +17,18 @@ p=update(p,'仓库人员',{stage:'现场处理',shipment:{...p.shipment,received
 p=update(p,'安装人员',{stage:'客户验收',serviceCost:{amountCents:100},operationResult:{stage:'现场处理',result:'修复完成'}});
 assert.throws(()=>update(p,'售后专员',{stage:'负责人复核',operationResult:{stage:'客户验收',result:'验收通过'}}),/客户确认人/);
 p=update(p,'售后专员',{stage:'负责人复核',operationResult:{stage:'客户验收',result:'客户验收通过',customerContact:'客户A'}});
+assert.equal(p.acceptanceHistory[0].confirmationMode,'customer');
+const waiting={...base,stage:'客户验收'};
+const internal={stage:'负责人复核',operationResult:{stage:'客户验收',result:'维修完成，通电测试正常',confirmationMode:'internal',confirmationBasis:'已核对维修视频与维修人员回传照片',customerContact:'不应冒充客户',actor:'伪造操作人',at:'伪造时间'}};
+assert.throws(()=>update(waiting,'售后专员',{...internal,operationResult:{...internal.operationResult,confirmationBasis:''}}),/代确认依据/);
+assert.throws(()=>update(waiting,'售后专员',{...internal,stage:'现场处理',operationResult:{...internal.operationResult,decision:'return'}}),/退回处理/);
+assert.throws(()=>update(waiting,'安装人员',internal),/岗位/);
+const confirmed=update(waiting,'售后专员',internal);
+assert.throws(()=>update(waiting,'管理员',{...internal,operationResult:{...internal.operationResult,confirmationMode:'fake'}}),/确认方式/);
+assert.equal(confirmed.stage,'负责人复核');assert.equal(confirmed.operations['客户验收'].actor,'售后专员');assert.equal(confirmed.operations['客户验收'].actorId,'售后专员');assert.equal(confirmed.operations['客户验收'].customerContact,'');assert.notEqual(confirmed.operations['客户验收'].at,'伪造时间');assert(confirmed.history.at(-1).action.includes('内部代确认'));assert.equal(confirmed.acceptanceHistory.length,1);
+const repeated=update({...confirmed,stage:'客户验收'},'管理员',internal);assert.equal(repeated.acceptanceHistory.length,2);assert.deepEqual(repeated.acceptanceHistory[0],confirmed.acceptanceHistory[0]);assert.equal(repeated.acceptanceHistory[1].actorId,'管理员');
+assert.throws(()=>update(confirmed,'售后专员',{stage:'已关闭',actual:'2026-10-28'}),/岗位/);
+assert.throws(()=>update(confirmed,'管理员',{acceptanceHistory:[]}),/不能修改字段/);
 assert.throws(()=>update(p,'售后专员',{stage:'已关闭',actual:'2026-10-25'}),/岗位/);
 p=update(p,'审核人员',{stage:'已关闭',actual:'2026-10-25',operationResult:{stage:'负责人复核',result:'核实关闭'}});assert.equal(p.stage,'已关闭');assert(p.history.every(x=>x.server));
 console.log('Server work policy passed: role/field guards, production sequence, prior shipment, customer acceptance and reviewer closure.');
