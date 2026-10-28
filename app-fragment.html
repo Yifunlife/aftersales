@@ -897,7 +897,7 @@ if(quoted)throw new Error('CSV 引号不完整，请检查文件。');if(cell||r
 }
 function excelImportRows(X,wb,name){
 const sheet=wb.Sheets[name];
-for(const [key,cell] of Object.entries(sheet)){if(key.startsWith('!')||cell.t!=='n'||!cell.z||!X.SSF.is_date(cell.z))continue;const date=X.SSF.parse_date_code(cell.v,{date1904:!!wb.Workbook?.WBProps?.date1904});if(!date)continue;cell.t='s';cell.v=String(date.y).padStart(4,'0')+'-'+String(date.m).padStart(2,'0')+'-'+String(date.d).padStart(2,'0');delete cell.w;delete cell.z;}
+for(const [key,cell] of Object.entries(sheet)){if(!key.startsWith('!')&&/DISPIMG\s*\(/i.test(cell.f||'')){cell.t='s';cell.v='';delete cell.w;delete cell.f;continue;}if(key.startsWith('!')||cell.t!=='n'||!cell.z||!X.SSF.is_date(cell.z))continue;const date=X.SSF.parse_date_code(cell.v,{date1904:!!wb.Workbook?.WBProps?.date1904});if(!date)continue;cell.t='s';cell.v=String(date.y).padStart(4,'0')+'-'+String(date.m).padStart(2,'0')+'-'+String(date.d).padStart(2,'0');delete cell.w;delete cell.z;}
 return X.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false,dateNF:'yyyy-mm-dd'});
 }
 function loadXLSX(){
