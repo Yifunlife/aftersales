@@ -24,3 +24,5 @@ import "./tests/problem-analysis.mjs";
 
 import './tests/work-policy.mjs';
 import './tests/runtime-bridge.mjs';
+
+await import('./tests/engineering-people.mjs');
