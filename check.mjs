@@ -26,3 +26,6 @@ import './tests/work-policy.mjs';
 import './tests/runtime-bridge.mjs';
 
 await import('./tests/engineering-people.mjs');
+
+await import("./tests/import-dates.mjs");
+await import("./tests/import-file-limit.mjs");
