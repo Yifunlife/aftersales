@@ -291,7 +291,7 @@
 <div id="yw-import" class="entry-form" hidden>
 <div class="toolbar"><h2>表格导入</h2><button type="button" class="cursor-interaction" data-template>下载导入模板</button></div>
 <label class="form-field">选择售后问题表格<input id="yw-file" type="file" accept=".xlsx,.xls,.csv,.tsv"></label>
-<div class="entry-actions"><small>支持紧凑记录单或逐行明细表 · 保持模板字段位置 · 日期 YYYY-MM-DD</small></div>
+<div class="entry-actions"><small>支持 Excel / CSV / TSV，最大100MB；保持模板字段位置，日期 YYYY-MM-DD。只导入文字和链接，内嵌图片请在工单中另行上传。</small></div>
 <div id="yw-import-status" aria-live="polite" class="muted" style="margin-top:10px"></div>
 <div id="yw-import-errors" class="import-errors" role="alert"></div>
 <div class="table-wrap"><table class="import-table" hidden><thead><tr><th>行</th><th>项目名称</th><th>问题描述</th><th>负责人</th><th>计划完成</th></tr></thead><tbody id="yw-import-body"></tbody></table></div>
@@ -721,7 +721,7 @@ function renderUploads(){
 $('#yw-upload-list').innerHTML=draftUploads.map((f,i)=>`<div class="upload-item">${f.type.startsWith('image/')?`<img src="${esc(f.url)}" alt="${esc(f.name)}">`:'<span class="muted">视频</span>'}<span>${esc(f.name)}<small>${(f.size/1024/1024).toFixed(1)} MB</small></span><button type="button" class="cursor-interaction" data-remove-upload="${i}" aria-label="移除 ${esc(f.name)}">移除</button></div>`).join('');
 }
 $('#yw-attachments').addEventListener('change',async e=>{
-const error=$('#yw-upload-error');error.textContent='';const files=[...e.target.files];e.target.value='';if(draftUploads.length+files.length>10){error.textContent='每条问题最多10个附件。';return}const form=new FormData();for(const f of files)form.append('files',f);try{const r=await fetch('/api/customer/staff-files',{method:'POST',body:form}),j=await r.json();if(!r.ok)throw Error(j.error);draftUploads.push(...j.files);renderUploads()}catch(err){error.textContent=err.message||'上传未成功，请重试。'}
+const error=$('#yw-upload-error');error.textContent='';const files=[...e.target.files];e.target.value='';if(files.some(f=>/\.(xlsx?|csv|tsv)$/i.test(f.name))){error.textContent='这是表格文件，请使用上方“导入表格”入口；这里仅上传照片或视频。当前填写内容已保留。';return}if(draftUploads.length+files.length>10){error.textContent='每条问题最多10个附件。';return}const form=new FormData();for(const f of files)form.append('files',f);try{const r=await fetch('/api/customer/staff-files',{method:'POST',body:form}),j=await r.json();if(!r.ok)throw Error(j.error);draftUploads.push(...j.files);renderUploads()}catch(err){error.textContent=err.message||'上传未成功，请重试。'}
 });
 const orderInput=$('#yw-manual [name="order"]');orderInput.setAttribute('list','yw-business-orders');orderInput.placeholder='输入或选择原订单，读取商务记录';
 const orderList=document.createElement('datalist');orderList.id='yw-business-orders';orderList.innerHTML=commercialRecords.map(d=>`<option value="${esc(d.order)}">${esc(d.customer)} / ${esc(d.project)}</option>`).join('');$('#yw-manual').appendChild(orderList);
@@ -923,7 +923,7 @@ $('.import-table').hidden=false;$('[data-import-confirm]').disabled=!!errors.len
 $('#yw-file').addEventListener('change',async e=>{
 const file=e.target.files[0];pending=[];$('[data-import-confirm]').disabled=true;$('.import-table').hidden=true;$('#yw-import-errors').textContent='';if(!file)return;
 $('#yw-import-status').textContent='正在读取并检查表格…';
-try{if(file.size>5*1024*1024)throw new Error('文件超过 5 MB，请精简后重新选择。');const ext=file.name.split('.').pop().toLowerCase();let rows;
+try{if(file.size>100*1024*1024)throw new Error('表格超过100MB，请分成多份导入，或移除内嵌图片后重试。');const ext=file.name.split('.').pop().toLowerCase();let rows;
 if(ext==='csv'||ext==='tsv')rows=csvRows(await file.text(),ext==='tsv'?'\t':',');else if(ext==='xlsx'||ext==='xls'){const X=await loadXLSX();const wb=X.read(await file.arrayBuffer(),{type:'array',cellDates:true});const name=wb.SheetNames.includes('售后记录单')?'售后记录单':wb.SheetNames.includes('售后问题导入')?'售后问题导入':wb.SheetNames[0];rows=X.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:false,dateNF:'yyyy-mm-dd'});}else throw new Error('请选择 Excel、CSV 或 TSV 文件。');if(String(rows[0]?.[0]||'').includes('售后维修记录单')){const parsed=readCompactForm(rows);prepareImport(parsed.rows,parsed.sources)}else prepareImport(rows)}catch(error){$('#yw-import-errors').textContent=error.message;$('#yw-import-status').textContent='未导入任何记录。'}
 });
 async function downloadTemplate(){
