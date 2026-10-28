@@ -7,5 +7,6 @@ p=Path('/etc/nginx/conf.d/yw-park-os.conf');s=p.read_text();s=s.replace('listen 
 PY
 nginx -t
 systemctl reload nginx
+sleep 1
 curl -fsS --max-time 10 https://47.116.18.155/api/auth/status
 printf '\nOriginal IP certificate restored as the explicit default.\n'

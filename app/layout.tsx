@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import CompanyFilingFooter from "./company-filing-footer";
 
 export const metadata: Metadata = {
   title: "亦玩集团 · 员工工作台",
@@ -17,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">{children}<CompanyFilingFooter/></body>
     </html>
   );
 }
