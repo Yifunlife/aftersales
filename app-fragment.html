@@ -87,6 +87,7 @@
 #yw-after-sales button:disabled{opacity:.45}
 #yw-after-sales .entry-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
 #yw-after-sales .notice{padding:9px 11px;margin-bottom:12px;background:#234132;color:#a3dfb5;border-radius:6px;font-size:12px}
+#yw-after-sales .yw-import-photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;max-height:480px;overflow:auto;margin:12px 0}#yw-after-sales .yw-import-photo{padding:12px;border:1px solid #dbe5ef;border-radius:12px;min-width:0}#yw-after-sales .yw-import-photo img{display:block;width:100%;height:150px;object-fit:contain;background:#f4f7fb;margin-bottom:8px}#yw-after-sales .yw-import-photo select{width:100%;min-width:0;margin-top:8px}
 #yw-after-sales .import-errors{color:var(--orange);font-size:12px;white-space:pre-wrap;margin-top:10px}
 #yw-after-sales .import-table{min-width:550px!important}
 #yw-after-sales .import-table td:first-child,#yw-after-sales .import-table th:first-child{position:static;min-width:40px}
@@ -291,8 +292,9 @@
 <div id="yw-import" class="entry-form" hidden>
 <div class="toolbar"><h2>表格导入</h2><button type="button" class="cursor-interaction" data-template>下载导入模板</button></div>
 <label class="form-field">选择售后问题表格<input id="yw-file" type="file" accept=".xlsx,.xls,.csv,.tsv"></label>
-<div class="entry-actions"><small>支持 Excel / CSV / TSV，最大100MB；保持模板字段位置，日期 YYYY-MM-DD。只导入文字和链接，内嵌图片请在工单中另行上传。</small></div>
+<div class="entry-actions"><small>支持 Excel / CSV / TSV，最大100MB；保持模板字段位置，日期 YYYY-MM-DD。XLSX 内嵌照片会按问题位置提取，预览确认后一起导入；单张照片最多10MB，每条问题最多10张。</small></div>
 <div id="yw-import-status" aria-live="polite" class="muted" style="margin-top:10px"></div>
+<div id="yw-import-photos"></div>
 <div id="yw-import-errors" class="import-errors" role="alert"></div>
 <div class="table-wrap"><table class="import-table" hidden><thead><tr><th>行</th><th>项目名称</th><th>问题描述</th><th>负责人</th><th>计划完成</th></tr></thead><tbody id="yw-import-body"></tbody></table></div>
 <div class="entry-actions"><button type="button" class="primary cursor-interaction" data-import-confirm disabled>确认导入</button><button type="button" class="cursor-interaction" data-entry-cancel>收起</button></div>
@@ -661,6 +663,7 @@ let state={nav:'售后审核中心',filter:'全部',selected:null,customer:'全�
 const savedState=window.openai?.widgetState?.privateContent;
 if(savedState&&navs.includes(savedState.nav))state={...state,...savedState,nav:'售后审核中心',filter:'全部',selected:null};
 let entryMode=null,pending=[],sessionAdded=0,xlsxPromise,draftUploads=[],intakeBatch=null,batchSequence=1;
+let importPhotos=[],importMedia=null,importReadId=0,importUploading=false,importTextConsent=false;
 function orderDueLabel(d){const date=d.orderPlanned||d.planned;if(!date)return '下单计划待填写';const days=Math.round((Date.parse(date)-Date.parse(today))/86400000);const label=days<0?'已超期 '+(-days)+' 天':days===0?'今日到期':days<=3?'即将到期 · 剩余 '+days+' 天':'剩余 '+days+' 天';return `<span class="${days<=3?'warn':'muted'}">下单计划 ${esc(date)} · ${label}</span>${d.orderGroup?' · '+esc(d.orderGroup)+' / '+esc(d.orderAssignee):''}`;}
 let staffPeople=[];
 let orderingGroups={'工程部':[]};
@@ -925,11 +928,30 @@ $('#yw-import-status').textContent=errors.length?`发现 ${errors.length} 行有
 $('#yw-import-body').innerHTML=records.slice(0,5).map((d,i)=>`<tr><td>${rowNumbers?.[i]??i+2}</td><td>${esc(d.project)}</td><td>${esc(d.issue)}</td><td>${esc(d.owner)}</td><td>${esc(d.planned||'待确认')}</td></tr>`).join('');
 $('.import-table').hidden=false;$('[data-import-confirm]').disabled=!!errors.length;$('[data-import-confirm]').textContent=errors.length?'请先修正表格':'确认导入 '+records.length+' 单';
 }
+function clearImportPhotos(){for(const p of importPhotos)if(p.preview)URL.revokeObjectURL(p.preview);importPhotos=[];$('#yw-import-photos').innerHTML='';importTextConsent=false;}
+function renderImportPhotos(){
+const box=$('#yw-import-photos');box.innerHTML=(importTextConsent?'<p class="import-errors">旧版 XLS 无法提取内嵌照片。建议另存为 XLSX 后导入。<label><input type="checkbox" id="yw-import-text-consent">我确认本次只导入文字和链接，不导入 XLS 内的照片</label></p>':'')+(importPhotos.length?`<p>已识别 ${importPhotos.length} 张照片。请核对对应问题；未匹配照片必须选择归属后才能导入。</p><div class="yw-import-photo-grid">${importPhotos.map((p,i)=>{p.preview ||= URL.createObjectURL(new Blob([p.bytes],{type:p.type}));return `<div class="yw-import-photo"><img src="${p.preview}" alt="表格照片 ${i+1}"><label>照片 ${i+1} · ${p.row==null?'位置待确认':'原表第 '+(p.row+1)+' 行'}<select data-import-photo="${i}"><option value="" ${p.issue==null?'selected':''}>请选择对应问题</option>${pending.map((d,n)=>`<option value="${n}" ${p.issue===n?'selected':''}>问题 ${n+1} · ${esc((d.product||'')+' '+d.issue.slice(0,60))}</option>`).join('')}<option value="-1">不导入此图</option></select></label></div>`}).join('')}</div>`:'');
+}
+async function uploadImportPhotos(){
+if(importTextConsent&&!$('#yw-import-text-consent')?.checked)throw Error('请确认只导入 XLS 的文字，或将原表另存为 XLSX 以导入照片。');
+if(!importPhotos.length)return pending;
+importMedia.checkPhotoAssignments(importPhotos,pending.length);
+const result=pending.map(d=>({...d,attachments:[...(d.attachments||[])]}));
+const waiting=importPhotos.filter(p=>p.issue!==-1&&!p.uploaded);let completed=0;
+while(waiting.length){const batch=[];let size=0;while(waiting.length&&batch.length<5&&size+waiting[0].bytes.length<=20000000){const p=waiting.shift();batch.push(p);size+=p.bytes.length;}
+$('#yw-import-status').textContent=`正在上传照片 ${completed+batch.length}/${importPhotos.filter(p=>p.issue!==-1).length}，请勿关闭页面…`;
+const form=new FormData();for(const p of batch)form.append('files',new Blob([p.bytes],{type:p.type}),p.name);const r=await fetch('/api/customer/staff-files',{method:'POST',body:form}),j=await r.json();if(!r.ok)throw Error(j.error||'照片上传失败，请重试');if(!Array.isArray(j.files)||j.files.length!==batch.length)throw Error('照片上传结果不完整，请重试。');batch.forEach((p,i)=>p.uploaded=j.files[i]);completed+=batch.length;}
+for(const p of importPhotos)if(p.issue!==-1)result[p.issue].attachments.push(p.uploaded);
+return result;
+}
+$('#yw-import-photos').addEventListener('change',e=>{if(!e.target.hasAttribute('data-import-photo'))return;const photo=importPhotos[Number(e.target.dataset.importPhoto)];if(photo)photo.issue=e.target.value===''?null:Number(e.target.value);});
 $('#yw-file').addEventListener('change',async e=>{
-const file=e.target.files[0];pending=[];$('[data-import-confirm]').disabled=true;$('.import-table').hidden=true;$('#yw-import-errors').textContent='';if(!file)return;
-$('#yw-import-status').textContent='正在读取并检查表格…';
-try{if(file.size>100*1024*1024)throw new Error('表格超过100MB，请分成多份导入，或移除内嵌图片后重试。');const ext=file.name.split('.').pop().toLowerCase();let rows;
-if(ext==='csv'||ext==='tsv')rows=csvRows(await file.text(),ext==='tsv'?'\t':',');else if(ext==='xlsx'||ext==='xls'){const X=await loadXLSX();const wb=X.read(await file.arrayBuffer(),{type:'array',cellDates:false,cellNF:true});const name=wb.SheetNames.includes('售后记录单')?'售后记录单':wb.SheetNames.includes('售后问题导入')?'售后问题导入':wb.SheetNames[0];rows=excelImportRows(X,wb,name);}else throw new Error('请选择 Excel、CSV 或 TSV 文件。');if(String(rows[0]?.[0]||'').includes('售后维修记录单')){const parsed=readCompactForm(rows);prepareImport(parsed.rows,parsed.sources)}else prepareImport(rows)}catch(error){$('#yw-import-errors').textContent=error.message;$('#yw-import-status').textContent='未导入任何记录。'}
+if(importUploading)return;const readId=++importReadId,file=e.target.files[0];clearImportPhotos();pending=[];$('[data-import-confirm]').disabled=true;$('.import-table').hidden=true;$('#yw-import-errors').textContent='';if(!file)return;
+$('#yw-import-status').textContent='正在读取并检查表格与照片…';
+try{if(file.size>100*1024*1024)throw new Error('表格超过100MB，请分成多份导入，或移除内嵌图片后重试。');const ext=file.name.split('.').pop().toLowerCase();let rows,photos=[],textConsent=false;
+if(ext==='csv'||ext==='tsv')rows=csvRows(await file.text(),ext==='tsv'?'\t':',');else if(ext==='xlsx'||ext==='xls'){const X=await loadXLSX(),bytes=await file.arrayBuffer();if(readId!==importReadId)return;const wb=X.read(bytes,{type:'array',cellDates:false,cellNF:true,bookFiles:ext==='xlsx'});const name=wb.SheetNames.includes('售后记录单')?'售后记录单':wb.SheetNames.includes('售后问题导入')?'售后问题导入':wb.SheetNames[0];rows=excelImportRows(X,wb,name);if(ext==='xlsx'){importMedia ||= await import('/import-excel-media.mjs?v=1');photos=importMedia.extractExcelPhotos(wb.files,name,rows,intakeSchema.layout);}else textConsent=true;}else throw new Error('请选择 Excel、CSV 或 TSV 文件。');
+if(readId!==importReadId)return;if(String(rows[0]?.[0]||'').includes('售后维修记录单')){const parsed=readCompactForm(rows);prepareImport(parsed.rows,parsed.sources)}else prepareImport(rows);if(!pending.length)return;importPhotos=photos;importTextConsent=textConsent;renderImportPhotos();if(photos.length)$('#yw-import-status').textContent+=` 已识别 ${photos.length} 张照片，请核对照片归属。`;
+}catch(error){if(readId!==importReadId)return;pending=[];$('[data-import-confirm]').disabled=true;$('#yw-import-errors').textContent=error.message;$('#yw-import-status').textContent='未导入任何记录。'}
 });
 async function downloadTemplate(){
 const response=await fetch('/templates/after-sales-import.xlsx',{cache:'no-store'});
@@ -990,9 +1012,9 @@ if(b.hasAttribute('data-go-engineering')){state.nav='工程下单中心';state.f
 if(b.dataset.projectOrder){const record=commercialRecords.find(d=>d.order===b.dataset.projectOrder);if(record)applyProject(record);return}
 if(b.hasAttribute('data-remove-upload')){const i=Number(b.dataset.removeUpload);if(draftUploads[i]){URL.revokeObjectURL(draftUploads[i].url);draftUploads.splice(i,1);renderUploads()}return}
 if(b.dataset.entry){entryMode=b.dataset.entry;state.selected=null;render();if(entryMode==='manual')updateAutoWarranty(false);return}
-if(b.hasAttribute('data-entry-cancel')){entryMode=null;render();return}
+if(b.hasAttribute('data-entry-cancel')){if(importUploading)return;entryMode=null;render();return}
 if(b.hasAttribute('data-template')){b.disabled=true;try{await downloadTemplate()}catch(error){$('#yw-import-errors').textContent=error.message}finally{b.disabled=false}return}
-if(b.hasAttribute('data-import-confirm')){if(pending.length)await addRecords(pending,'表格导入');return}
+if(b.hasAttribute('data-import-confirm')){if(importUploading||!pending.length)return;importUploading=true;b.disabled=true;$('#yw-file').disabled=true;try{const records=await uploadImportPhotos();if(await addRecords(records,'表格导入'))clearImportPhotos();}catch(error){$('#yw-import-errors').textContent=error.message;$('#yw-import-status').textContent='尚未确认导入；已上传的照片会保留，重试无需重复上传。';}finally{importUploading=false;$('#yw-file').disabled=false;b.disabled=!pending.length;}return}
 if(b.dataset.nav){state.nav=b.dataset.nav;if(state.nav==='售后审核中心'){state.reviewTab='待审核';state.customer='全部客户';state.order='全部项目 / 订单';}const map={'售后审核中心':'审核','工程下单中心':'工程下单','采购中心':'生产采购','仓库与物流中心':'发货物流','安装中心':'现场处理'};state.filter=map[state.nav]||'全部';state.selected=null;entryMode=null;$('#yw-notice').hidden=true}
 else if(b.dataset.filter){state.filter=b.dataset.filter;state.selected=null}
 else if(b.dataset.id){state.selected=b.dataset.id}
