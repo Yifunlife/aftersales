@@ -68,6 +68,8 @@ for(const b of [{name:'邮箱甲',email:'emailonly@example.test'},{name:'邮箱�
 assert.equal((await call('employees',{name:'空账号',role:'生产人员',password:pw})).status,400);
 assert.equal((await call('employees',{name:'重复工号',employeeId:'only001',role:'生产人员',password:pw})).status,409);
 assert.equal((await call('employees',{name:'重复邮箱',email:'EMAILONLY@example.test',role:'生产人员',password:pw})).status,409);
+const duplicateNotice=await call('employees',{name:'重复邮箱',email:'EMAILONLY@example.test',role:'生产人员',password:pw});
+assert.equal(duplicateNotice.status,409);assert(duplicateNotice.data.error.includes('左侧选择该员工'));assert(!duplicateNotice.data.error.includes('服务暂时不可用'));
 assert.equal((await call('employees',{name:'错邮箱',email:'bad@',role:'生产人员',password:pw})).status,400);
 const emailEmployee=(await call('employees')).data.employees.find(u=>u.email==='emailonly@example.test');
 assert.equal((await call('employees/'+emailEmployee.id,{...emailEmployee,email:'',employeeId:'CHANGED001'})).status,200);
