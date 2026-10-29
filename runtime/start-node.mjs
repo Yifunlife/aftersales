@@ -11,6 +11,7 @@ const {startProdServer}=await import('vinext/server/prod-server');
 const port=Number(process.env.PORT||3100),innerPort=port+1;
 await startProdServer({port:innerPort,host:'127.0.0.1',outDir:join(dir,'dist')});
 createServer((req,res)=>{
+ if(req.url==='/WW_verify_K0TGViO8AVLMsoYB.txt'&&(req.method==='GET'||req.method==='HEAD')){res.writeHead(200,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'});res.end(req.method==='HEAD'?'':'K0TGViO8AVLMsoYB');return}
  if(req.url==='/__health'&&req.method==='GET'){res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:true,service:'yifun-aftersales',runtime:'aliyun-node'}));return}
  const secret=String(req.headers['x-yifun-origin-key']||'');if(secret.length!==config.originSecret.length||!timingSafeEqual(Buffer.from(secret),Buffer.from(config.originSecret))){res.writeHead(404);res.end();return}
  const requestedHost=String(req.headers['x-forwarded-host']||config.publicHost).toLowerCase();const host=publicHosts.includes(requestedHost)?requestedHost:config.publicHost;
