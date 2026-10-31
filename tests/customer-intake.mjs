@@ -104,3 +104,9 @@ const acceptanceInvite=(await call('invites',{body:{customerId:acceptanceRow.cus
 const acceptancePortal=await call('portal?token='+new URL(acceptanceInvite).searchParams.get('token'),{user:null});assert.equal(acceptancePortal.status,200);
 const customerProgress=acceptancePortal.data.requests.flatMap(r=>r.work).find(w=>w.id===acceptanceRow.id);assert.equal(customerProgress.confirmationMode,'internal');assert(!JSON.stringify(acceptancePortal.data).includes('内部核实依据-不应公开'));assert(!JSON.stringify(acceptancePortal.data).includes('伪客户名'));
 console.log('Internal completion confirmation persists server identity and immutable audit; stale saves reject and customer progress hides private evidence.');
+// Registration corrections preserve workflow and require ownership/version/audit reason.
+{const all=(await call('work-items',{user:'admin'})).data.items;const original=all[0];
+assert.equal((await call('work-items/correct',{user:'buyer',body:{id:original.id,version:original.cloudVersion,fields:{issue:'wrong'},reason:'test'}})).status,403);
+assert.equal((await call('work-items/correct',{user:'admin',body:{id:original.id,version:original.cloudVersion,fields:{issue:'corrected'},reason:''}})).status,400);
+const updated=await call('work-items/correct',{user:'admin',body:{id:original.id,version:original.cloudVersion,fields:{issue:'corrected issue'},reason:'Correct typo'}});assert.equal(updated.status,200);assert.equal(updated.data.item.stage,original.stage);assert.equal(updated.data.item.issue,'corrected issue');assert.equal(updated.data.item.registrationCorrections.at(-1).changes[0].before,original.issue);
+assert.equal((await call('work-items/correct',{user:'admin',body:{id:original.id,version:original.cloudVersion,fields:{issue:'stale'},reason:'stale save'}})).status,409);}
