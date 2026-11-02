@@ -3,10 +3,12 @@ import {DatabaseSync} from 'node:sqlite';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {engineeringPeople,validateEngineeringAssignment} from '../lib/engineering-people.mjs';
-const sql=new DatabaseSync(':memory:');sql.exec('CREATE TABLE employees(id TEXT,name TEXT,role TEXT,active INTEGER)');
-for(const r of [['1','真实工程','工程人员',1],['2','停用工程','工程人员',0],['3','采购','采购人员',1],['4','重名','工程人员',1],['5','重名','工程人员',1]])sql.prepare('INSERT INTO employees VALUES(?,?,?,?)').run(...r);
+const sql=new DatabaseSync(':memory:');sql.exec("CREATE TABLE employees(id TEXT,name TEXT,role TEXT,active INTEGER,roles TEXT DEFAULT '[]')");
+for(const r of [['1','真实工程','工程人员',1],['2','停用工程','工程人员',0],['3','采购','采购人员',1],['4','重名','工程人员',1],['5','重名','工程人员',1]])sql.prepare('INSERT INTO employees(id,name,role,active) VALUES(?,?,?,?)').run(...r);
 const db={prepare(query){return {async all(){return {results:sql.prepare(query).all()}}}}};
 assert.deepEqual(await engineeringPeople(db),['真实工程']);
+sql.prepare("INSERT INTO employees(id,name,role,active,roles) VALUES('dual','兼任工程','采购人员',1,?)").run(JSON.stringify(['采购人员','工程人员']));assert((await engineeringPeople(db)).includes('兼任工程'));
+
 const old={stage:'工程下单'},assignment={orderGroup:'工程部',orderAssignee:'真实工程'};
 await validateEngineeringAssignment(db,old,assignment);
 for(const name of ['停用工程','采购','周工程','重名'])await assert.rejects(()=>validateEngineeringAssignment(db,old,{...assignment,orderAssignee:name}),/已启用/);

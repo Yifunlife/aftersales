@@ -2,7 +2,7 @@ import {DatabaseSync} from 'node:sqlite';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {digest} from '../lib/accounts.mjs';
-import {notificationStatement,drainNotifications,handleNotifications,remindUnprocessed} from '../lib/work-notifications.mjs';
+import {notificationRecipients,notificationStatement,drainNotifications,handleNotifications,remindUnprocessed} from '../lib/work-notifications.mjs';
 const sqlite=new DatabaseSync(':memory:');sqlite.exec('PRAGMA foreign_keys=ON');for(const file of fs.readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sqlite.exec(fs.readFileSync('drizzle/'+file,'utf8'));
 class Statement{constructor(sql,values=[]){this.sql=sql;this.values=values}bind(...values){return new Statement(this.sql,values)}async first(){return sqlite.prepare(this.sql).get(...this.values)||null}async all(){return {results:sqlite.prepare(this.sql).all(...this.values)}}async run(){return {meta:{changes:Number(sqlite.prepare(this.sql).run(...this.values).changes)}}}}
 const db={prepare:sql=>new Statement(sql),async batch(statements){sqlite.exec('BEGIN');try{const results=[];for(const s of statements)results.push(await s.run());sqlite.exec('COMMIT');return results}catch(e){sqlite.exec('ROLLBACK');throw e}}};
@@ -30,3 +30,9 @@ assert.equal(notificationStatement(db,{...row,payload:JSON.stringify(p)},p,actor
 console.log('Notification transactional outbox, disabled history, recipients, leases, retries, privacy and authorization passed');
 
 behavior='ok';sqlite.prepare("UPDATE work_notifications SET created_at=? WHERE id=?").run(Date.now()-86400001,j.id);const before=calls.length;await remindUnprocessed(db,config,fetcher);assert(calls.length>before);assert(JSON.parse(calls.at(-1).options.body).text.content.includes('24小时'));const after=calls.length;await remindUnprocessed(db,config,fetcher);assert.equal(calls.length,after,'24h reminder sends once per handoff');
+
+// A secondary job is eligible; an employee still appears only once in a queue.
+sqlite.prepare('UPDATE employees SET roles=? WHERE id=?').run(JSON.stringify(['采购人员','生产人员']),'buyer');
+sqlite.prepare("INSERT OR IGNORE INTO notification_routes(stage,employee_id) VALUES('生产采购','buyer')").run();
+const dualRecipients=await notificationRecipients(db,{}, {owner:'采购甲',stage:'生产采购'});assert.deepEqual(dualRecipients.users,['wecom-buyer']);
+console.log('Secondary job notification eligibility keeps one recipient per employee.');

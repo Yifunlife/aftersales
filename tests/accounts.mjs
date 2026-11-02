@@ -77,3 +77,18 @@ assert.equal((await call('auth/login',{identifier:'emailonly@example.test',passw
 assert.equal((await call('auth/login',{identifier:'changed001',password:pw})).status,200);
 assert.equal((await call('employees/'+emailEmployee.id,{...emailEmployee,email:'',employeeId:''})).status,400);
 console.log('Passed: multiple email-only and ID-only employees, no generated identifiers, uniqueness, validation and editing login identifiers.');
+// Multiple jobs are one account; primary admin status cannot be hidden as a secondary grant.
+const multi={name:'兼任人员',employeeId:'MULTI001',roles:['工程人员','审核人员','采购人员'],password:pw,wecomUserId:'MultiUser'};
+assert.equal((await call('employees',multi)).status,201);
+let multiUser=(await call('employees')).data.employees.find(u=>u.employeeId==='multi001');assert.deepEqual(multiUser.roles,multi.roles);
+assert.equal((await call('employees',{...multi,employeeId:'invalidmulti',roles:[]})).status,400);
+assert.equal((await call('employees',{...multi,employeeId:'invalidmulti',roles:['bad']})).status,400);
+let multiLogin=await call('auth/login',{identifier:'MULTI001',password:pw});assert.deepEqual(multiLogin.data.user.roles,multi.roles);
+assert.equal((await call('auth/password',{currentPassword:pw,password:'NewMultiFixture_27!'},{session:multiLogin.cookie})).status,200);
+multiLogin=await call('auth/login',{identifier:'MULTI001',password:'NewMultiFixture_27!'});
+assert.equal((await call('employees',undefined,{session:multiLogin.cookie})).status,403);
+assert.equal((await call('employees/'+multiUser.id,{...multiUser,roles:['工程人员'],active:true})).status,200);
+assert.equal((await call('auth/status',undefined,{session:multiLogin.cookie})).data.user,null);
+assert.equal((await call('employees',{...multi,employeeId:'multiadmin',roles:['审核人员','管理员'],wecomUserId:''})).status,201);
+const grantedAdmin=(await call('employees')).data.employees.find(u=>u.employeeId==='multiadmin');assert.equal(grantedAdmin.role,'管理员');assert(grantedAdmin.roles.includes('审核人员'));
+console.log('Multiple roles: create/edit/validation, normalized admin, role revocation invalidates sessions, WeCom binding and no self-escalation.');

@@ -32,3 +32,11 @@ assert.throws(()=>update(confirmed,'管理员',{acceptanceHistory:[]}),/不能�
 assert.throws(()=>update(p,'售后专员',{stage:'已关闭',actual:'2026-10-25'}),/岗位/);
 p=update(p,'审核人员',{stage:'已关闭',actual:'2026-10-25',operationResult:{stage:'负责人复核',result:'核实关闭'}});assert.equal(p.stage,'已关闭');assert(p.history.every(x=>x.server));
 console.log('Server work policy passed: role/field guards, production sequence, prior shipment, customer acceptance and reviewer closure.');
+// The union of jobs allows each granted stage but does not grant unrelated cost data or arbitrary transitions.
+{const actor={role:'工程人员',roles:['工程人员','采购人员'],id:'dual',name:'兼任员工'},record={...base,stage:'采购',production:{amountCents:99000,status:'生产中'},purchase:{amountCents:100,buyer:'兼任员工',status:'已采购',tracking:'T'}};
+const view=projectWork(record,actor.roles);assert.equal(view.purchase.amountCents,100);assert.equal(view.production.amountCents,undefined);
+const next=applyWorkUpdate(record,{...view,purchase:{...view.purchase,amountCents:200}},actor);assert.equal(next.purchase.amountCents,200);assert.equal(next.production.amountCents,99000);assert.equal(next.history.at(-1).actorRole,'采购人员');
+assert.throws(()=>applyWorkUpdate({...record,stage:'生产采购'},{...projectWork({...record,stage:'生产采购'},actor.roles)},actor),/岗位/);
+const full=projectWork(record,['管理员','工程人员']);assert.equal(full.production.amountCents,99000);
+}
+console.log('Multi-role union permissions preserve department privacy, original hidden fields and record acting job.');
