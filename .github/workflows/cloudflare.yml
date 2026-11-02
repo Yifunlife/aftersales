@@ -1,7 +1,5 @@
 name: Cloudflare production
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read

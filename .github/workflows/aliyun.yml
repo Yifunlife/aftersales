@@ -1,0 +1,70 @@
+name: Aftersales production
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Deploy main or restore the previous application release
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+permissions:
+  contents: read
+concurrency:
+  group: aftersales-production
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        if: inputs.action != 'rollback'
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install and verify
+        if: inputs.action != 'rollback'
+        run: |
+          npm ci
+          node check.mjs
+          python3 tests/release-controller.py
+      - name: Build the independent Node service
+        if: inputs.action != 'rollback'
+        env:
+          DEPLOY_TARGET: node
+        run: |
+          npm run build
+          cp runtime/start-node.mjs dist/standalone/start-node.mjs
+          cp -R drizzle dist/standalone/migrations
+          node -e "require('fs').writeFileSync('dist/standalone/release.json',JSON.stringify({revision:process.env.GITHUB_SHA,run:process.env.GITHUB_RUN_ID}))"
+          tar -czf release.tgz -C dist/standalone .
+      - name: Configure restricted release connection
+        env:
+          RELEASE_KEY: ${{ secrets.AFTERSALES_RELEASE_KEY }}
+          RELEASE_HOSTS: ${{ secrets.AFTERSALES_RELEASE_HOSTS }}
+        run: |
+          test -n "$RELEASE_KEY" && test -n "$RELEASE_HOSTS"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$RELEASE_KEY" > ~/.ssh/aftersales
+          printf '%s\n' "$RELEASE_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/aftersales ~/.ssh/known_hosts
+      - name: Upload and publish, with server checks and automatic application recovery
+        if: inputs.action != 'rollback'
+        run: |
+          ssh -i ~/.ssh/aftersales -o BatchMode=yes -o StrictHostKeyChecking=yes yw-deploy@47.116.18.155 upload < release.tgz
+          ssh -i ~/.ssh/aftersales -o BatchMode=yes -o StrictHostKeyChecking=yes yw-deploy@47.116.18.155 deploy
+      - name: Restore previous application release
+        if: inputs.action == 'rollback'
+        run: ssh -i ~/.ssh/aftersales -o BatchMode=yes -o StrictHostKeyChecking=yes yw-deploy@47.116.18.155 rollback
+      - name: Verify public availability and deployed revision
+        run: |
+          curl --fail --retry 3 --max-time 20 https://aftersales.shyiwan.com/__health
+          ssh -i ~/.ssh/aftersales -o BatchMode=yes -o StrictHostKeyChecking=yes yw-deploy@47.116.18.155 status
+      - name: Remove temporary release credential
+        if: always()
+        run: rm -f ~/.ssh/aftersales
