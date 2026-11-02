@@ -17,3 +17,11 @@ The user requires the **售后专员填写** form and **Excel 标准导入模板
 - Customer requests remain pending until an authorized 售后专员 or 管理员 checks the information and chooses an active reviewer. Only that handoff creates formal work items for the existing review flow.
 - Profiles/stores support stable market IDs for future marketing-system synchronization; no external CRM connection is currently configured. Store search is confined to the invitation customer.
 - New cloud-workflow changes must retain optimistic version checks and role validation. Do not substitute browser storage for shared requests or attachments. Run `node tests/customer-intake.mjs` when changing this flow.
+
+# Production publishing
+
+- Production is `https://aftersales.shyiwan.com` on the independent Aliyun Node service. Push `main` to trigger `.github/workflows/aliyun.yml`; wait for **Aftersales production** to pass, then confirm the revision with `ssh yw-aliyun sudo -n /usr/local/bin/yifun-aftersales-release status` and the public `/__health`. A successful Git push alone does not mean publication succeeded.
+- Use this cloud release channel for normal updates. Do not use Safari, rerun the old `install-root.sh`, rewrite `/etc/yifun-aftersales/runtime.json`, change central-service files, or install broad sudo access for routine publication.
+- The dedicated controller supports exactly `deploy`, `rollback`, and `status`; the CI SSH key is separately restricted to upload and these operations. Runtime secrets stay on the server. See `runtime/release/README.md`. Controller or permission changes require a separate administrator installation; never weaken its checks as a deployment shortcut.
+- Include every checked migration in the release. Database migrations must preserve compatibility with the previous application release; application rollback does not revert business data or schema changes.
+- The Cloudflare workflow is manual-only for resource bridge/front-door updates. Do not re-enable a second push-to-main production deploy pipeline.

@@ -45,7 +45,7 @@ def statements(source):
     return result
 
 def rpc(config,payload):
-    request=urllib.request.Request(config['resourceUrl'],data=json.dumps(payload).encode(),headers={'Authorization':'Bearer '+config['resourceSecret'],'Content-Type':'application/json'},method='POST')
+    request=urllib.request.Request(config['resourceUrl'],data=json.dumps(payload).encode(),headers={'Authorization':'Bearer '+config['resourceSecret'],'Content-Type':'application/json','User-Agent':'Yifun-Aftersales-Server/1.0'},method='POST')
     with urllib.request.urlopen(request,timeout=120) as response: return json.load(response)
 
 def migrate(dest,config):
