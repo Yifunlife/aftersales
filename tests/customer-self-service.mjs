@@ -126,3 +126,8 @@ reply=await assist('软件闪退怎么办',{cookie:cookies.admin,product:'软件
 console.log('Type-only knowledge passed: publication, retrieval and assistant without a product model.');
 
 reply=await assist('软件如果出现问题应该怎么办',{cookie:cookies.admin,product:'软件'});assert.equal(reply.body.mode,'clarify');assert(reply.body.suggestions.includes('软件闪退'));
+// Review filtering is restricted to managers; requesting draft status never exposes private content to customers.
+const draftFilter=(await call('/api/knowledge?manage=1&status=draft')).body;assert(draftFilter.items.every(x=>x.status==='draft'));
+const publishedFilter=(await call('/api/knowledge?manage=1&status=published')).body;assert(publishedFilter.items.every(x=>x.status==='published'));
+const customerFilter=(await call('/api/knowledge?manage=1&status=draft',{employee:null,cookie:cookie1})).body;assert(customerFilter.items.every(x=>x.status==='published'));
+console.log('Knowledge review filters preserve public publication gate.');
