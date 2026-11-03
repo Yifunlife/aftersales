@@ -33,3 +33,5 @@ await import("./tests/import-file-limit.mjs");
 await import("./tests/import-excel-media.mjs");
 
 import './tests/work-notifications.mjs';
+
+import "./tests/acceptance-routing.mjs";

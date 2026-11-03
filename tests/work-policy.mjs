@@ -40,3 +40,7 @@ assert.throws(()=>applyWorkUpdate({...record,stage:'生产采购'},{...projectWo
 const full=projectWork(record,['管理员','工程人员']);assert.equal(full.production.amountCents,99000);
 }
 console.log('Multi-role union permissions preserve department privacy, original hidden fields and record acting job.');
+// Acceptance pass uses the recorded handoff day; it does not require a new repair deadline.
+{const old={...base,stage:'客户验收',planned:'',contact:'客户'},actor={role:'售后专员',id:'staff',name:'专员'};
+const next=applyWorkUpdate(old,{...projectWork(old,actor.role),stage:'负责人复核',owner:'审核员',planned:'',operationResult:{stage:'客户验收',result:'维修完成，客户满意',decision:'pass',customerContact:'客户'}},actor);
+assert.equal(next.planned,new Date(Date.now()+28800000).toISOString().slice(0,10));assert.equal(next.stage,'负责人复核');}
