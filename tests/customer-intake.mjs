@@ -122,3 +122,21 @@ const saved=await call('work-items/engineering-correct',{user:'engineer',body:co
 assert.equal((await call('work-items/engineering-correct',{user:'admin',body:correction})).status,409);
 }
 console.log('Engineering corrections preserve downstream execution, reject future actual dates, require audit and version.');
+// Recoverable test removal frees the active dataset while retaining the exact row and its attachments.
+{const created=await call('staff-work-items',{user:'admin',body:{items:[{id:'STAFF-'+crypto.randomUUID(),batchId:'STAFF-CASE-'+crypto.randomUUID(),customer:'回收测试',project:'测试项目',product:'设备',issue:'故障',owner:'admin',submitted:true,attachments:[]}]}});assert.equal(created.status,201);const item=created.data.items[0],remove={op:'remove',id:item.id,version:item.cloudVersion,reason:'仅跑流程'};
+assert.equal((await call('work-recycle',{user:'buyer',body:remove})).status,403);
+assert.equal((await call('work-recycle',{user:'admin',body:{...remove,version:0}})).status,409);
+assert.equal((await call('work-recycle',{user:'admin',body:{...remove,reason:''}})).status,400);
+assert.equal((await call('work-recycle',{user:'admin',body:remove})).status,200);
+assert(!(await call('work-items',{user:'admin'})).data.items.some(x=>x.id===item.id));
+assert.equal((await call('work-items',{user:'admin',body:{items:[item]}})).status,404);
+assert.equal((await call('staff-work-items',{user:'admin',body:{items:[item]}})).status,409,'A delayed registration retry cannot recreate recycled work');
+const recycled=(await call('work-recycle',{user:'admin'})).data.items.find(x=>x.workId===item.id);assert(recycled);
+assert.equal(sqlite.prepare("SELECT count(*) AS n FROM work_notifications WHERE work_id=? AND status NOT IN ('sent','cancelled')").get(item.id).n,0);
+assert.equal((await call('work-recycle',{user:'admin',body:{op:'restore',archiveId:recycled.archiveId}})).status,200);
+const restored=(await call('work-items',{user:'admin'})).data.items.find(x=>x.id===item.id);assert(restored);assert.equal(restored.cloudVersion,item.cloudVersion+1);assert.deepEqual(restored.attachments,item.attachments);
+assert.equal((await call('work-recycle',{user:'admin',body:{op:'restore',archiveId:recycled.archiveId}})).status,409);
+// A posted payment prevents removal even when marked as a test.
+assert.equal((await call('work-recycle',{user:'admin',body:{op:'remove',id:staffId,version:(await call('work-items',{user:'admin'})).data.items.find(x=>x.id===staffId).cloudVersion,reason:'不能移除真实账务'}})).status,409);
+}
+console.log('Test work recycle: admin-only, stale saves, preserved attachments, reversible restore, no registration resurrection, cancelled reminders, payment guard.');
