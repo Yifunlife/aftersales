@@ -140,3 +140,29 @@ assert.equal((await call('work-recycle',{user:'admin',body:{op:'restore',archive
 assert.equal((await call('work-recycle',{user:'admin',body:{op:'remove',id:staffId,version:(await call('work-items',{user:'admin'})).data.items.find(x=>x.id===staffId).cloudVersion,reason:'不能移除真实账务'}})).status,409);
 }
 console.log('Test work recycle: admin-only, stale saves, preserved attachments, reversible restore, no registration resurrection, cancelled reminders, payment guard.');
+// Review actions operate on the complete pending batch, never a partial or stale selection.
+{
+const batchId='STAFF-CASE-'+crypto.randomUUID();
+const created=await call('staff-work-items',{body:{items:[1,2].map(n=>({id:'STAFF-'+crypto.randomUUID(),batchId,customer:'退回客户',project:'退回项目',product:'设备'+n,issue:'录入错误'+n,owner:'reviewer',submitted:true,attachments:[]}))}});assert.equal(created.status,201);
+let items=created.data.items;const action=(op,extra={})=>({op,batchId,reason:'核对后重新填写',items:items.map(x=>({id:x.id,version:x.cloudVersion})),...extra});
+assert.equal((await call('review-batch/action',{user:'buyer',body:action('return')})).status,403);
+assert.equal((await call('review-batch/action',{user:'reviewer',body:action('return',{items:[{id:items[0].id,version:1}]})})).status,409);
+assert.equal((await call('review-batch/action',{user:'reviewer',body:action('return',{reason:''})})).status,400);
+const returned=await call('review-batch/action',{user:'reviewer',body:action('return')});assert.equal(returned.status,200,JSON.stringify(returned.data));assert(returned.data.items.every(x=>x.stage==='登记草稿'&&x.submitted===false&&x.owner==='staff'&&!x.reviewDraft));
+items=returned.data.items;
+assert.equal((await call('review-batch/action',{user:'reviewer',body:action('remove')})).status,409);
+const corrected=await call('work-items/correct',{body:{id:items[0].id,version:items[0].cloudVersion,fields:{issue:'已修改的问题'},reason:'审核要求修改'}});assert.equal(corrected.status,200);items[0]=corrected.data.item;
+for(const x of items){const resubmit=await call('work-items',{body:{items:[{...x,submitted:true,stage:'审核'}]}});assert.equal(resubmit.status,200,JSON.stringify(resubmit.data));}
+items=(await call('work-items',{user:'admin'})).data.items.filter(x=>x.batchId===batchId);assert(items.every(x=>x.stage==='审核'&&x.owner==='reviewer'));
+const stale=action('remove');stale.items[1].version=0;assert.equal((await call('review-batch/action',{user:'reviewer',body:stale})).status,409);assert.equal((await call('work-items',{user:'admin'})).data.items.filter(x=>x.batchId===batchId).length,2);
+assert.equal((await call('review-batch/action',{user:'reviewer',body:action('remove')})).status,200);
+assert.equal((await call('work-items',{user:'admin'})).data.items.filter(x=>x.batchId===batchId).length,0);
+const archives=(await call('work-recycle',{user:'admin'})).data.items.filter(x=>items.some(i=>i.id===x.workId));assert.equal(archives.length,2);assert(archives.every(x=>x.reason.includes('审核删除')));
+for(const a of archives)assert.equal((await call('work-recycle',{user:'admin',body:{op:'restore',archiveId:a.archiveId}})).status,200);
+// Any downstream issue makes the entire batch ineligible.
+const row=sqlite.prepare('SELECT * FROM staff_work_items WHERE id=?').get(items[0].id),p=JSON.parse(row.payload);p.stage='工程下单';sqlite.prepare('UPDATE staff_work_items SET payload=? WHERE id=?').run(JSON.stringify(p),row.id);
+items=(await call('work-items',{user:'admin'})).data.items.filter(x=>x.batchId===batchId);
+assert.equal((await call('review-batch/action',{user:'admin',body:action('remove')})).status,409);
+assert.equal(sqlite.prepare("SELECT count(*) AS n FROM staff_work_items WHERE json_extract(payload,'$.batchId')=?").get(batchId).n,2);
+}
+console.log('Review batch return/delete: complete versioned snapshots, role guards, editable drafts, reviewer resubmission, recycle recovery and downstream protection.');
