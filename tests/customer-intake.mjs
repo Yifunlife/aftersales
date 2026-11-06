@@ -166,3 +166,28 @@ assert.equal((await call('review-batch/action',{user:'admin',body:action('remove
 assert.equal(sqlite.prepare("SELECT count(*) AS n FROM staff_work_items WHERE json_extract(payload,'$.batchId')=?").get(batchId).n,2);
 }
 console.log('Review batch return/delete: complete versioned snapshots, role guards, editable drafts, reviewer resubmission, recycle recovery and downstream protection.');
+
+// An order link reads current status and scopes the response to that order.
+{
+  const created = await call('staff-work-items', {body:{items:[
+    {id:'STAFF-'+crypto.randomUUID(),batchId:'STAFF-CASE-'+crypto.randomUUID(),customer:'链接客户',project:'<测试门店>',order:'LINK-1',product:'链接设备',issue:'待修理',owner:'staff',submitted:true},
+    {id:'STAFF-'+crypto.randomUUID(),batchId:'STAFF-CASE-'+crypto.randomUUID(),customer:'链接客户',project:'<测试门店>',order:'LINK-2',product:'其他订单专用设备',issue:'待修理',owner:'staff',submitted:true}
+  ]}});
+  assert.equal(created.status,201);
+  const id=created.data.items[0].id;
+  assert.equal((await call('order-progress',{user:'buyer',body:{id}})).status,403);
+  const link=await call('order-progress',{body:{id}});
+  assert.equal(link.status,200);
+  const path=new URL(link.data.url).search;
+  const read=()=>call('order-progress'+path,{user:null});
+  let page=await read();
+  assert.equal(page.status,200);
+  let html=new TextDecoder().decode(page.data);
+  assert(html.includes('&lt;测试门店&gt;')&&html.includes('审核中'));
+  assert(!html.includes('其他订单专用设备'));
+  sqlite.prepare("UPDATE staff_work_items SET payload=json_set(payload,'$.stage','已关闭') WHERE id=?").run(id);
+  page=await read();
+  assert(new TextDecoder().decode(page.data).includes('已完成 1 / 1 项'));
+  sqlite.exec('UPDATE order_progress_links SET expires_at=0');
+  assert.equal((await read()).status,404);
+}
