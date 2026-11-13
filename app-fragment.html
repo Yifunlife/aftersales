@@ -830,7 +830,7 @@ updateBatchProgress();
 }
 function captureReviewEdits(form){if(!form)return;const d=data.find(d=>d.id===form.dataset.workId);if(!d)return;const raw=Object.fromEntries(new FormData(form));if(raw.needOrder==='no')raw.department='售后部';reviewEdits.set(d.id,raw);updateBatchProgress();}
 function updateBatchProgress(){const d=data.find(d=>d.id===state.selected);if(!d||!$('#yw-batch-progress'))return;const items=batchItems(d);const ready=items.filter(x=>x.reviewDraft?.ready&&!reviewEdits.has(x.id)).length;$('#yw-batch-progress').textContent=items.every(x=>x.review?.approved)?'本次报修已统一提交；审核方案完成不代表设备已修复。':`审核方案已保存 ${ready} / ${items.length} 条；${ready===items.length?'可统一提交下一环节。':'剩余问题完成前，不会转出本次报修单。'}`;const b=$('[data-dispatch-batch]');if(b)b.disabled=!batchReady(items);}
-function saveReviewItem(form){
+async function saveReviewItem(form){
 const d=data.find(d=>d.id===form.dataset.workId),raw=Object.fromEntries(new FormData(form)),error=form.querySelector('.item-review-error');
 if(!d||d.stage!=='审核'||d.review?.approved){error.textContent='本条不在待审核状态。';return}
 if(raw.needOrder==='no')raw.department='售后部';
@@ -838,7 +838,18 @@ if(['method','reviewer','needOrder','nextOwner','planned'].some(k=>!String(raw[k
 if(!validDate(raw.planned)||raw.planned<today){error.textContent='请填写有效的下一环节计划完成时间。';return}
 if(d.grade==='S'&&!String(raw.analysis||'').trim()){error.textContent='S级安全问题需填写技术评估意见。';return}
 if(raw.needOrder==='yes'&&raw.department==='采购部'&&!String(raw.purchaseItems||'').trim()){error.textContent='分派采购部时，请填写采购物品、规格与数量；有型号请一并填写。';return;}
-d.reviewDraft={...raw,ready:true,savedAt:today};reviewEdits.delete(d.id);collapsedReviewItems.add(d.id);d.history ||= [];d.history.push({at:today,actor:raw.reviewer,action:'保存本条审核方案，等待整单统一提交'});render();notice('本条审核方案已保存，其余问题可以继续处理，尚未转入下一环节。');persist();
+const button=form.querySelector('[type=submit]');if(button.disabled)return;button.disabled=true;button.textContent='正在保存到云端…';
+d.reviewDraft={...raw,ready:true,savedAt:today};
+try{
+ await saveCustomerWork();
+ // An existing save may have started before this form changed.
+ if(JSON.stringify(d)!==cloudBaselines.get(d.id))await saveCustomerWork();
+ const saved=JSON.parse(cloudBaselines.get(d.id)||'{}');
+ if(JSON.stringify(saved.reviewDraft)!==JSON.stringify(d.reviewDraft))throw Error('本条方案尚未保存成功。请保留页面并重试。');
+ reviewEdits.delete(d.id);collapsedReviewItems.add(d.id);
+ render();notice('本条审核方案已保存到云端，刷新后可继续审核。');persist();
+}catch(err){error.textContent=err.message;button.disabled=false;button.textContent='重试保存本条审核方案';}
+
 }
 async function dispatchReviewBatch(batchId){
 await saveCustomerWork();const originals=new Map(data.filter(d=>(d.batchId||d.id)===batchId).map(d=>[d.id,structuredClone(d)]));

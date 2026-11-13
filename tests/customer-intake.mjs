@@ -56,11 +56,12 @@ assert.equal((await call('file/'+staffFile.id,{user:null})).status,401);
 const metadata=sqlite.prepare('SELECT * FROM staff_files WHERE id=?').get(staffFile.id);assert.equal(metadata.size,4);assert.equal(objects.get(metadata.object_key).length,4);assert(!JSON.stringify(metadata).includes('data:'));
 assert.deepEqual(sqlite.prepare('PRAGMA foreign_key_check').all(),[]);console.log('Customer intake passed: durable submission and files, store/profile autofill, customer isolation, scoped links, revocation, deduplication, supplement, specialist gate, reviewer handoff, cloud workflow persistence, employee permissions and private-field filtering.');
 // Saving one review draft must persist it without dispatching the whole report.
-const vm=await import('node:vm');const source=fs.readFileSync('app-fragment.html','utf8');const reviewSource=source.slice(source.indexOf('function saveReviewItem(form)'),source.indexOf('async function dispatchReviewBatch('));
+const vm=await import('node:vm');const source=fs.readFileSync('app-fragment.html','utf8');const reviewSource=source.slice(source.indexOf('async function saveReviewItem(form)'),source.indexOf('async function dispatchReviewBatch('));
 let persisted=0;const draft={id:'draft-cloud',stage:'审核',grade:'B',history:[],cloudRequestId:'request'};const error={textContent:''};
 class FormDataMock extends Map{constructor(form){super(Object.entries(form.values))}}
-const ctx={error,data:[draft],FormData:FormDataMock,departments:['售后部'],today:'2026-10-19',validDate:v=>/^\d{4}-\d{2}-\d{2}$/.test(v),reviewEdits:new Map(),collapsedReviewItems:new Set(),render(){},notice(){},persist(){persisted++}};
-vm.createContext(ctx);vm.runInContext(reviewSource+';saveReviewItem({dataset:{workId:"draft-cloud"},values:{method:"检查固定点",reviewer:"审核员",needOrder:"no",nextOwner:"专员",planned:"2026-10-25"},querySelector:()=>error});',ctx);assert.equal(error.textContent,'');assert.equal(draft.reviewDraft.ready,true);assert.equal(draft.stage,'审核');assert.equal(persisted,1,'A saved review draft must be queued for cloud persistence');
+const baselines=new Map();
+const ctx={cloudBaselines:baselines,async saveCustomerWork(){baselines.set(draft.id,JSON.stringify(draft))},error,data:[draft],FormData:FormDataMock,departments:['售后部'],today:'2026-10-19',validDate:v=>/^\d{4}-\d{2}-\d{2}$/.test(v),reviewEdits:new Map(),collapsedReviewItems:new Set(),render(){},notice(){},persist(){persisted++}};
+vm.createContext(ctx);await vm.runInContext(reviewSource+';saveReviewItem({dataset:{workId:"draft-cloud"},values:{method:"检查固定点",reviewer:"审核员",needOrder:"no",nextOwner:"专员",planned:"2026-10-25"},querySelector:(selector)=>selector==="[type=submit]"?{}:error});',ctx);assert.equal(error.textContent,'');assert.equal(draft.reviewDraft.ready,true);assert.equal(draft.stage,'审核');assert.equal(persisted,1,'A saved review draft must be queued for cloud persistence');
 console.log('Customer review draft passed: save persists immediately; full dispatch still waits for all issue plans.');
 
 // Closure generates exactly one private, reviewable solution draft atomically.
