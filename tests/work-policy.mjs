@@ -45,3 +45,12 @@ console.log('Multi-role union permissions preserve department privacy, original 
 {const old={...base,stage:'客户验收',planned:'',contact:'客户'},actor={role:'售后专员',id:'staff',name:'专员'};
 const next=applyWorkUpdate(old,{...projectWork(old,actor.role),stage:'负责人复核',owner:'审核员',planned:'',operationResult:{stage:'客户验收',result:'维修完成，客户满意',decision:'pass',customerContact:'客户'}},actor);
 assert.equal(next.planned,new Date(Date.now()+28800000).toISOString().slice(0,10));assert.equal(next.stage,'负责人复核');}
+
+// Specialists can perform valid department handoffs while keeping stage requirements.
+const assistPurchase={...base,stage:'采购'};
+assert.throws(()=>update(assistPurchase,'售后专员',{stage:'生产采购'}),/采购/);
+const assisted=update(assistPurchase,'售后专员',{purchase:{status:'仓库有库存',buyer:'采购员',amountCents:2500},stage:'生产采购'});
+assert.equal(assisted.stage,'生产采购');
+assert.equal(assisted.history.at(-1).actorRole,'售后专员');
+assert.equal(assisted.purchase.amountCents,2500);
+assert.throws(()=>update({...base,stage:'工程下单'},'售后专员',{stage:'生产采购'}),/正式下单/);
