@@ -27,9 +27,10 @@ const confirmed=update(waiting,'售后专员',internal);
 assert.throws(()=>update(waiting,'管理员',{...internal,operationResult:{...internal.operationResult,confirmationMode:'fake'}}),/确认方式/);
 assert.equal(confirmed.stage,'负责人复核');assert.equal(confirmed.operations['客户验收'].actor,'售后专员');assert.equal(confirmed.operations['客户验收'].actorId,'售后专员');assert.equal(confirmed.operations['客户验收'].customerContact,'');assert.notEqual(confirmed.operations['客户验收'].at,'伪造时间');assert(confirmed.history.at(-1).action.includes('内部代确认'));assert.equal(confirmed.acceptanceHistory.length,1);
 const repeated=update({...confirmed,stage:'客户验收'},'管理员',internal);assert.equal(repeated.acceptanceHistory.length,2);assert.deepEqual(repeated.acceptanceHistory[0],confirmed.acceptanceHistory[0]);assert.equal(repeated.acceptanceHistory[1].actorId,'管理员');
-assert.throws(()=>update(confirmed,'售后专员',{stage:'已关闭',actual:'2026-10-28'}),/岗位/);
+assert.throws(()=>update(confirmed,'售后专员',{stage:'已关闭',actual:'2026-10-28'}),/处理结果/);
+const specialistClosed=update(confirmed,'售后专员',{stage:'已关闭',actual:'2026-10-28',operationResult:{stage:'负责人复核',decision:'pass',result:'已完成核实'},serviceCost:{amountCents:12345}});assert.equal(specialistClosed.stage,'已关闭');assert.equal(specialistClosed.serviceCost.amountCents,12345);
 assert.throws(()=>update(confirmed,'管理员',{acceptanceHistory:[]}),/不能修改字段/);
-assert.throws(()=>update(p,'售后专员',{stage:'已关闭',actual:'2026-10-25'}),/岗位/);
+assert.throws(()=>update(p,'售后专员',{stage:'已关闭',actual:'2026-10-25'}),/处理结果/);
 p=update(p,'审核人员',{stage:'已关闭',actual:'2026-10-25',operationResult:{stage:'负责人复核',result:'核实关闭'}});assert.equal(p.stage,'已关闭');assert(p.history.every(x=>x.server));
 console.log('Server work policy passed: role/field guards, production sequence, prior shipment, customer acceptance and reviewer closure.');
 // The union of jobs allows each granted stage but does not grant unrelated cost data or arbitrary transitions.
