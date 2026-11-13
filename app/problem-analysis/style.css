@@ -12,3 +12,34 @@
 @media(max-width:760px){.sp.analysis-shell .help-wrap{padding:16px 14px 32px}.analysis-hero{padding:25px 22px;border-radius:17px;align-items:flex-start;gap:14px}.analysis-hero h1{font-size:26px;letter-spacing:.02em}.analysis-hero p{font-size:12px}.analysis-hero-mark{display:none}.analysis-hero-tools{padding-top:2px}.sp .analysis-hero-tools button{font-size:0;min-height:34px;padding:8px}.analysis-hero-meta{gap:10px 16px;font-size:10px;margin-top:18px}.analysis-hero .eyebrow{font-size:10px}.sp.analysis-shell .analysis-tabs{gap:3px;padding:4px;margin:16px 0;border-radius:12px}.sp.analysis-shell .analysis-tabs button{padding:11px 8px;gap:7px;justify-content:center;border-radius:9px}.analysis-tabs strong{font-size:13px}.analysis-tabs small{display:none}.analysis-tabs button>svg{width:16px;height:16px}.sp .analysis-definition{font-size:11px;padding:10px 12px;margin-bottom:22px}.analysis-definition small{display:none}.analysis-section-bar{align-items:flex-start;gap:12px}.analysis-section-bar h2{font-size:17px}.analysis-section-bar .muted{font-size:11px;max-width:150px}.analysis-section-bar .analysis-period{gap:0;flex-shrink:0}.sp .analysis-period button{padding:4px 8px;font-size:11px;min-height:29px}.sp .analysis-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.sp .analysis-metrics .panel{padding:15px 14px}.analysis-metric-heading small{font-size:11px}.analysis-metric-icon{width:25px;height:25px;border-radius:7px}.analysis-metric-icon svg{width:15px;height:15px}.sp .analysis-metric b{font-size:28px;margin-top:11px}.sp .analysis-metric b.analysis-metric-text{font-size:17px}.analysis-summary-grid{grid-template-columns:1fr;gap:12px;margin-bottom:18px}.sp.analysis-shell .panel{padding:19px 16px;border-radius:14px}.analysis-summary h2{font-size:14px}.analysis-improvement-counts{margin:20px 0 16px}.analysis-improvement-counts b{font-size:24px}.analysis-legend{gap:8px}.analysis-legend>span{font-size:11px}.sp .analysis-table table{min-width:0;font-size:12px}.sp .analysis-table th{white-space:normal;font-size:11px}.sp .analysis-table th,.sp .analysis-table td{padding:12px 10px}.sp .analysis-table td:first-child{min-width:130px}.analysis-action>.bar h2{font-size:19px}.analysis-assessment b{font-size:14px}.analysis-editor .fields{gap:16px}.analysis-month-picker>.actions{align-items:stretch}.analysis-month-picker>.actions>label{flex:1;min-width:0}.analysis-month-picker input{min-width:0}.analysis-month-picker>.actions>button{width:100%;margin-top:5px}.analysis-loading{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.analysis-loading>span:last-of-type{display:none}}
 @media(max-width:620px){.analysis-problems>.bar{align-items:flex-start}.analysis-problems h2{font-size:17px}.analysis-problems>.bar .primary{font-size:12px;min-height:35px;padding:6px 10px}.sp .analysis-problem-table{border:0;overflow:visible;margin-top:18px}.sp .analysis-problem-table table,.analysis-problem-table tbody{display:block;width:100%;min-width:0}.analysis-problem-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.analysis-problem-table tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1px solid #e5edf4;border-radius:12px;margin-bottom:12px;overflow:hidden}.sp .analysis-problem-table td{display:flex;flex-direction:column;gap:6px;border:0;padding:12px 10px;background:#fff;font-size:15px;min-width:0;text-align:center}.analysis-problem-table td::before{content:attr(data-label);font-size:10px;color:#8b9bab;font-weight:400}.sp .analysis-problem-table td:first-child{grid-column:1/-1;min-width:0;width:auto;text-align:start;padding:15px 13px;border-bottom:1px solid #edf2f7}.analysis-problem-table td:first-child::before{display:none}.sp .analysis-problem-table td:last-child{grid-column:1/-1;width:auto;background:#f8fbfe;text-align:start;display:block;border-top:1px solid #edf2f7;padding:12px 14px}.analysis-problem-table td:last-child p{margin:5px 0 10px}.analysis-topic{gap:9px}.analysis-fault-count{align-self:center}.analysis-editor .fields{grid-template-columns:1fr}.analysis-editor .actions>button{flex:1}.analysis-improvement-counts span{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.analysis-loading>span{animation:none}}
+
+/* Compact issue ranking with comparable count bars. */
+.sp.analysis-shell .help-wrap{padding:18px 22px 32px}
+.sp.analysis-shell .analysis-hero{padding:22px 26px;border-radius:16px}
+.analysis-hero h1{font-size:26px;margin:8px 0}
+.analysis-hero-meta{margin-top:12px}
+.sp.analysis-shell .panel{padding:18px}
+.sp .analysis-problem-table td,.sp .analysis-problem-table th{padding:10px 12px}
+.analysis-topic{gap:9px}
+.analysis-rank{width:25px;height:25px;border-radius:7px}
+.analysis-issue-detail{max-width:420px;margin-top:4px}
+.analysis-issue-detail summary{cursor:pointer;color:#71849b;font-size:12px;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.analysis-issue-detail[open] summary{display:block;font-weight:500}
+.sp .analysis-issue-detail p{background:#f3f7fb;border-radius:8px;padding:8px;margin:6px 0 0}
+.analysis-mini-count{display:flex;flex-direction:column;gap:5px;align-items:center;min-width:42px;font-variant-numeric:tabular-nums}
+.analysis-mini-count meter{width:64px;max-width:100%;height:8px;accent-color:#4d8fbb}
+.analysis-mini-count meter::-webkit-meter-bar{background:#e9eff5;border:0;border-radius:4px}
+.analysis-mini-count meter::-webkit-meter-optimum-value{background:#739ec1;border-radius:4px}
+td[data-label="正式故障"] meter::-webkit-meter-optimum-value{background:#d7997e}
+td[data-label="确认已解决"] meter::-webkit-meter-optimum-value{background:#68aa91}
+.sp .analysis-suggestion{display:inline-block;background:#f1f5fa;border-radius:7px;padding:4px 8px;font-size:11px;margin:0 0 6px;line-height:1.5}
+.analysis-suggestion span{color:#7094ad}
+@media(max-width:620px){
+.sp.analysis-shell .help-wrap{padding:12px}
+.sp .analysis-problem-table td{padding:8px 10px}
+.sp .analysis-problem-table td:first-child{padding:11px}
+.sp .analysis-problem-table td:last-child{padding:8px 11px}
+.analysis-problem-table tr{margin-bottom:9px}
+.analysis-hero h1{font-size:23px}
+.analysis-issue-detail{max-width:100%}
+}
