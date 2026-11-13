@@ -1723,7 +1723,7 @@ root.addEventListener('submit',e=>{if(!canWrite()){e.preventDefault();e.stopImme
 function paint(){root.dataset.accessReadonly=String(!canWrite());root.querySelectorAll(':scope>.shell>nav [data-nav]').forEach(b=>{const hidden=!role().view.includes(b.dataset.nav);if(b.hidden!==hidden)b.hidden=hidden;});if(!canWrite(pages[1]))root.querySelectorAll('#yw-entry').forEach(e=>e.hidden=true);}
 let scheduled=false;new MutationObserver(()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;paint();});}).observe(root.querySelector('.shell'),{childList:true,subtree:true});
 const view=new URLSearchParams(location.search).get('view'),landing=person().role==='售后专员'?'客户工单中心':person().role==='审核人员'?'售后审核中心':role().view[0];window.__yifunWorkflow?.navigate(view==='review'&&role().view.includes('售后审核中心')?'售后审核中心':view==='customer-inbox'&&role().view.includes('客户工单中心')?'客户工单中心':view==='product-library'?'产品资料中心':view==='problem-analysis'&&role().view.includes('问题分析与改善')?'问题分析与改善':landing);paint();
-setInterval(async()=>{try{const j=await(await fetch('/api/auth/status',{cache:'no-store'})).json();if(!j.user||j.user.mustChange||JSON.stringify(j.user.roles||[j.user.role])!==JSON.stringify(assigned()))location.href='/';}catch{}},60000);
+setInterval(async()=>{try{const response=await fetch('/api/auth/status',{cache:'no-store'});if(!response.ok)return;const j=await response.json();if(!Object.hasOwn(j,'user'))return;if(!j.user||j.user.mustChange||JSON.stringify(j.user.roles||[j.user.role])!==JSON.stringify(assigned()))location.href='/';}catch{}},60000);
 })();</script>
 <style id="personnel-access-style">
 #yw-after-sales .yw-account{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;font-size:13px;}
@@ -2041,3 +2041,40 @@ let pending=false;new MutationObserver(()=>{if(!pending){pending=true;requestAni
 <style id="customer-inbox-embed-style">#yw-after-sales #yw-customer-center{min-width:0;border:1px solid #e2e9f1;border-radius:12px;overflow:hidden;background:#fff}#yw-after-sales #yw-customer-center iframe{display:block;width:100%;border:0;height:max(760px,calc(100dvh - 200px));background:#fff}@media(max-width:760px){#yw-after-sales #yw-customer-center{margin:0 -4px;border:0;border-radius:0}#yw-after-sales #yw-customer-center iframe{height:calc(100dvh - 240px);min-height:600px}}</style>
 <style id="product-center-embed-style">#yw-after-sales #yw-product-center{min-width:0;border:1px solid #e2e9f1;border-radius:12px;overflow:hidden;background:#fff}#yw-after-sales #yw-product-center iframe{display:block;width:100%;border:0;height:max(950px,calc(100dvh - 200px));background:#fff}@media(max-width:760px){#yw-after-sales #yw-product-center{border:0;border-radius:0}#yw-after-sales #yw-product-center iframe{height:calc(100dvh - 200px);min-height:640px}}
 </style>
+<script>
+(()=>{
+ const root=document.getElementById('yw-after-sales');
+ const user=window.__EMPLOYEE__;
+ if(!root||!user?.id)return;
+ const key='yifun-form-drafts:'+user.id;
+ let drafts={};
+ try{drafts=JSON.parse(sessionStorage.getItem(key)||'{}')}catch{}
+ function formKey(form){return form.id||form.dataset.workId&&('work:'+form.dataset.workId+':'+form.className)}
+ function persist(){try{sessionStorage.setItem(key,JSON.stringify(drafts))}catch{}}
+ root.addEventListener('input',event=>{
+  const field=event.target,form=field.form;
+  if(!form||!field.name||['password','file','hidden'].includes(field.type))return;
+  const id=formKey(form);if(!id)return;
+  drafts[id]||={};
+  drafts[id][field.name]=field.type==='checkbox'?field.checked:field.value;
+  persist();
+ });
+ root.addEventListener('change',event=>{
+  if(event.target.matches('input,select,textarea'))event.target.dispatchEvent(new Event('input',{bubbles:true}));
+ });
+ let pending=false;
+ function restore(){
+  pending=false;
+  for(const form of root.querySelectorAll('form')){
+   const draft=drafts[formKey(form)];if(!draft)continue;
+   for(const field of form.elements){
+    if(!field.name||['password','file','hidden'].includes(field.type)||!Object.hasOwn(draft,field.name))continue;
+    if(field.type==='checkbox')field.checked=draft[field.name];else field.value=draft[field.name];
+   }
+  }
+ }
+ new MutationObserver(()=>{if(!pending){pending=true;queueMicrotask(restore)}}).observe(root,{childList:true,subtree:true});
+ root.addEventListener('reset',event=>{delete drafts[formKey(event.target)];persist()});
+ restore();
+})();
+</script>
