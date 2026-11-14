@@ -54,3 +54,6 @@ assert.equal(assisted.stage,'生产采购');
 assert.equal(assisted.history.at(-1).actorRole,'售后专员');
 assert.equal(assisted.purchase.amountCents,2500);
 assert.throws(()=>update({...base,stage:'工程下单'},'售后专员',{stage:'生产采购'}),/正式下单/);
+const replacement=update({...base,stage:'采购'},'售后专员',{purchase:{status:'仓库有库存',buyer:'采购员',amountCents:1000,destination:'安装服务部'},stage:'现场处理'});
+assert.equal(replacement.stage,'现场处理');
+assert.throws(()=>update({...base,stage:'采购'},'售后专员',{purchase:{status:'仓库有库存',buyer:'采购员',amountCents:1000,destination:'安装服务部'},stage:'生产采购'}),/不允许/);
