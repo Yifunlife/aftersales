@@ -2130,14 +2130,18 @@ let pending=false;new MutationObserver(()=>{if(!pending){pending=true;requestAni
  root.addEventListener('change',event=>{
   if(event.target.matches('input,select,textarea'))event.target.dispatchEvent(new Event('input',{bubbles:true}));
  });
+ const restoredForms=new WeakSet();
  let pending=false;
  function restore(){
   pending=false;
   for(const form of root.querySelectorAll('form')){
+   if(restoredForms.has(form))continue;
+   restoredForms.add(form);
    const draft=drafts[formKey(form)];if(!draft)continue;
    for(const field of form.elements){
     if(!field.name||['password','file','hidden'].includes(field.type)||!Object.hasOwn(draft,field.name))continue;
-    if(field.type==='checkbox')field.checked=draft[field.name];else field.value=draft[field.name];
+    if(field===document.activeElement)continue;
+    if(field.type==='checkbox')field.checked=draft[field.name];else if(field.value!==draft[field.name])field.value=draft[field.name];
    }
   }
  }
